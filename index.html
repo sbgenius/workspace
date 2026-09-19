@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>persistance-machine</title>
+<style>
+:root{
+  --bg:#e6e9ee; --panel:#f8f9fb; --panel2:#ffffff; --line:#cdd3dc; --ink:#151c26; --mute:#5b6675;
+  --accent:#1f4fd8; --accent-ink:#ffffff; --ok:#1f8f4e; --warn:#b26a00; --bad:#c62d3a;
+  --screen-off:#1b222d; --screen-on:#173a8a; --sel:#d9e3fb;
+  --font:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#10141a; --panel:#171c24; --panel2:#1d232d; --line:#2b3441; --ink:#e6eaf0; --mute:#93a0b2;
+    --accent:#6b93ff; --accent-ink:#0b1020; --ok:#4cc27f; --warn:#e0a13a; --bad:#ff6b76;
+    --screen-off:#0a0d12; --screen-on:#2452c9; --sel:#243252}
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--font)}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hidden{display:none!important}
+h1,h2,h3{margin:0;font-weight:600}
+a{color:var(--accent)}
+
+/* ---------- auth ---------- */
+#auth{min-height:100%;display:grid;place-items:center;padding:24px}
+.auth-card{width:min(440px,100%);background:var(--panel2);border:1px solid var(--line);border-radius:6px}
+.auth-head{padding:22px 24px 6px}
+.auth-head h1{font-size:22px;letter-spacing:-.01em}
+.auth-head p{margin:6px 0 0;color:var(--mute)}
+.tabs{display:flex;border-bottom:1px solid var(--line);margin-top:14px}
+.tabs button{flex:1;padding:10px;background:none;border:0;border-bottom:2px solid transparent;cursor:pointer;color:var(--mute)}
+.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+form.stack{padding:18px 24px 24px;display:grid;gap:14px}
+label{display:grid;gap:5px;font-weight:600;font-size:13px}
+label small{font-weight:400;color:var(--mute)}
+input[type=text],input[type=password],input[type=number],select{
+  width:100%;padding:8px 10px;background:var(--panel);border:1px solid var(--line);border-radius:4px}
+input:focus{border-color:var(--accent)}
+.btn{padding:8px 14px;border-radius:4px;border:1px solid var(--line);background:var(--panel);cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.note{font-size:12.5px;color:var(--mute);margin:0}
+.note.warn{color:var(--warn)}
+.err{color:var(--bad);font-size:13px;margin:0;min-height:1em;white-space:pre-wrap}
+.steps{list-style:none;margin:0;padding:0;font-size:13px;display:grid;gap:3px}
+.steps li::before{content:"\2713  ";color:var(--ok)}
+.steps li.cur::before{content:"\2026  ";color:var(--mute)}
+
+/* ---------- app ---------- */
+#app{height:100%;display:grid;grid-template-rows:auto 1fr}
+.toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+.toolbar .brand{font-weight:700;margin-right:10px;letter-spacing:-.01em}
+.toolbar .sp{flex:1}
+.toolbar .who{color:var(--mute);font-size:13px}
+.split{display:grid;grid-template-columns:270px 1fr;min-height:0}
+#list{background:var(--panel);border-right:1px solid var(--line);overflow:auto}
+.m-item{display:grid;grid-template-columns:36px 1fr;gap:10px;align-items:center;padding:10px 12px;width:100%;
+  text-align:left;background:none;border:0;border-bottom:1px solid var(--line);cursor:pointer}
+.m-item:hover{background:var(--panel2)}
+.m-item[aria-current=true]{background:var(--sel)}
+.m-item .n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-item .s{font-size:12px;color:var(--mute)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mute);margin-right:5px}
+.dot.on{background:var(--ok)}
+.dot.busy{background:var(--warn)}
+.empty{padding:28px 18px;color:var(--mute)}
+#detail{overflow:auto;padding:20px 24px 40px}
+.d-head{display:grid;grid-template-columns:150px 1fr;gap:22px;align-items:center}
+.d-head h2{font-size:24px;letter-spacing:-.01em}
+.meta{display:flex;flex-wrap:wrap;gap:4px 18px;color:var(--mute);font-size:13px;margin-top:6px}
+.meta code{font-family:var(--mono);font-size:12px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.snaps{margin-top:22px;border:1px solid var(--line);border-radius:4px;background:var(--panel2)}
+.snaps > button.tog{width:100%;text-align:left;padding:10px 14px;background:none;border:0;cursor:pointer;font-weight:600;display:flex;gap:8px}
+.snaps .chev{display:inline-block;transition:transform .15s}
+.snaps[data-open=true] .chev{transform:rotate(90deg)}
+.snap-row{display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:center;padding:9px 14px;border-top:1px solid var(--line)}
+.snap-row .t{font-weight:600}
+.snap-row .s{color:var(--mute);font-size:12.5px}
+.tree{position:relative;border-top:1px solid var(--line)}
+.tree svg{position:absolute;left:0;top:0;pointer-events:none}
+.trow{height:64px;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding-right:12px;border-bottom:1px solid var(--line)}
+.trow:last-child{border-bottom:0}
+.trow .t{font-weight:600}
+.trow .s{color:var(--mute);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.desc{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.desc.none{color:var(--mute);font-style:italic}
+textarea{width:100%;min-height:78px;padding:8px 10px;background:var(--panel);border:1px solid var(--line);border-radius:4px;resize:vertical;font:inherit;color:inherit}
+.btn.sm{padding:4px 9px;font-size:12.5px}
+.badge{font-size:11.5px;padding:1px 7px;border-radius:9px;border:1px solid var(--ok);color:var(--ok);margin-left:6px}
+#session{margin:0 0 18px}
+.sess{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:4px;background:var(--panel2);padding:14px 16px}
+.sess.done{border-left-color:var(--ok)} .sess.bad{border-left-color:var(--bad)}
+.sess h3{font-size:15px}
+.sess p{margin:6px 0 0}
+.kv{display:grid;grid-template-columns:auto 1fr auto;gap:6px 12px;align-items:center;margin-top:10px;font-size:13px}
+.kv code{font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kv .k{color:var(--mute)}
+.sess .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+dialog{border:1px solid var(--line);border-radius:6px;background:var(--panel2);color:var(--ink);padding:0;width:min(420px,92vw)}
+dialog::backdrop{background:rgba(10,14,20,.5)}
+dialog form{padding:18px 20px;display:grid;gap:14px}
+dialog h3{font-size:17px}
+.rowb{display:flex;gap:8px;justify-content:flex-end}
+.chk{display:flex;gap:8px;align-items:center;font-weight:400}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);
+  padding:9px 16px;border-radius:4px;font-size:13px;max-width:90vw}
+@media (max-width:760px){
+  .split{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  #list{max-height:34vh;border-right:0;border-bottom:1px solid var(--line)}
+  .d-head{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- ================= AUTH ================= -->
+<div id="auth">
+  <div class="auth-card">
+    <div class="auth-head">
+      <h1>persistance-machine</h1>
+      <p>Cloud machines that keep every snapshot. Everything is encrypted in a public GitHub repo; your password never leaves this page.</p>
+    </div>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-login" aria-selected="true">Log in</button>
+      <button role="tab" id="tab-signup" aria-selected="false">Sign up</button>
+    </div>
+
+    <form class="stack" id="login-form" autocomplete="on">
+      <label>GitHub username
+        <input type="text" id="li-user" autocomplete="username" required>
+      </label>
+      <label>Password
+        <input type="password" id="li-pw" autocomplete="current-password" required>
+      </label>
+      <p class="err" id="li-err" role="alert"></p>
+      <button class="btn primary" id="li-btn" type="submit">Log in</button>
+    </form>
+
+    <form class="stack hidden" id="signup-form" autocomplete="off">
+      <label>GitHub personal access token
+        <input type="password" id="su-pat" autocomplete="off" required placeholder="ghp_…">
+        <small>Classic token with the <b>repo</b> and <b>workflow</b> scopes. It is encrypted here, then stored in the new public repo <code>persistance-machine</code>.</small>
+      </label>
+      <label>Password
+        <input type="password" id="su-pw" autocomplete="new-password" minlength="12" required>
+        <small>At least 12 characters. The encrypted vault is public, so anyone can try to guess this offline. Use a long passphrase. It cannot be recovered.</small>
+      </label>
+      <label>Confirm password
+        <input type="password" id="su-pw2" autocomplete="new-password" required>
+      </label>
+      <ul class="steps" id="su-steps"></ul>
+      <p class="err" id="su-err" role="alert"></p>
+      <button class="btn primary" id="su-btn" type="submit">Create account</button>
+    </form>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app" class="hidden">
+  <div class="toolbar">
+    <span class="brand">persistance-machine</span>
+    <button class="btn primary" id="btn-new">New machine</button>
+    <span class="sp"></span>
+    <span class="who" id="who"></span>
+  </div>
+  <div class="split">
+    <nav id="list" aria-label="Machines"></nav>
+    <main id="detail">
+      <div id="session"></div>
+      <div id="machine"></div>
+    </main>
+  </div>
+</div>
+
+<!-- new machine -->
+<dialog id="dlg-new">
+  <form method="dialog" id="new-form">
+    <h3>New machine</h3>
+    <label>Name
+      <input type="text" id="nm-name" maxlength="60" required placeholder="e.g. Rust sandbox">
+    </label>
+    <label>Description <small>(optional, saved with the first snapshot)</small>
+      <textarea id="nm-desc" maxlength="500" placeholder="What is this machine for?"></textarea>
+    </label>
+    <p class="err" id="nm-err"></p>
+    <div class="rowb">
+      <button class="btn" type="button" id="nm-cancel">Close</button>
+      <button class="btn primary" type="submit" id="nm-ok">Create</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- start / resume -->
+<dialog id="dlg-start">
+  <form method="dialog" id="start-form">
+    <h3 id="sd-title">Start</h3>
+    <p class="note" id="sd-base"></p>
+    <label>Description for the snapshot this session saves
+      <textarea id="sd-desc" maxlength="500" placeholder="What are you going to do in this session?"></textarea>
+      <small>Stored encrypted. You can edit it later from the snapshot list.</small>
+    </label>
+    <div class="rowb">
+      <button class="btn" type="button" id="sd-cancel">Cancel</button>
+      <button class="btn primary" type="submit" id="sd-ok">Start</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- edit snapshot description -->
+<dialog id="dlg-editnote">
+  <form method="dialog" id="editnote-form">
+    <h3>Edit description</h3>
+    <label>Description for this snapshot
+      <textarea id="en-desc" maxlength="500"></textarea>
+    </label>
+    <div class="rowb">
+      <button class="btn" type="button" id="en-cancel">Cancel</button>
+      <button class="btn primary" type="submit" id="en-ok">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="hidden" role="status"></div>
+
+<!-- The workflow that gets pushed into the repo. Kept verbatim in a text block. -->
+<script type="text/plain" id="wf">
+# .github/workflows/persistent-workspace.yml
+#
+# Persistent cloud dev box, driven by the persistance-machine web app.
+#
+#  * Every machine has an opaque machine_id. Names live only in the encrypted
+#    registry files (machines/*.enc), never in run inputs or release tags.
+#  * All work lives in ONE sparse ext4 disk image; Docker's data-root is on it.
+#  * On a clean stop (touch /STOP inside the box, or the session budget runs
+#    out) the image is cut into chunks, ZSTD-compressed, AES-256 ENCRYPTED with
+#    the SNAPSHOT_KEY repo secret, and uploaded to a NEW release. Then an
+#    encrypted record snapshots/<tag>.enc is committed. Snapshots are never
+#    deleted or overwritten.
+#  * Cancelling the run (or any failure) uploads NOTHING. The runner just dies.
+#  * Tunnel URLs + code-server password are written to session.enc in the repo
+#    root, encrypted to the repo's RSA public key (public.pem). Only the web
+#    app (which holds the private key, unlocked by your password) can read it.
+#  * Nothing sensitive is printed to the logs: this repo is public.
+
+name: Persistent Workspace
+run-name: "ws ${{ inputs.session_id }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      machine_id:
+        description: "Opaque machine id (set by the web app)"
+        type: string
+        required: true
+      session_id:
+        description: "Opaque session id (set by the web app)"
+        type: string
+        required: true
+      mode:
+        description: "new = fresh disk, resume = restore snapshot_tag"
+        type: choice
+        required: true
+        default: new
+        options:
+          - new
+          - resume
+      snapshot_tag:
+        description: "Release tag to restore (required for resume)"
+        type: string
+        required: false
+        default: ""
+      force_rebuild:
+        description: "Discard the existing container and recreate from the Dockerfile below"
+        type: boolean
+        required: false
+        default: false
+      session_minutes:
+        description: "Session length before auto-snapshot (hard cap 240)"
+        type: string
+        required: false
+        default: "240"
+      image_size:
+        description: "Disk image size (mode=new only), e.g. 70G"
+        type: string
+        required: false
+        default: "70G"
+      chunk_mb:
+        description: "Release asset chunk size in MiB"
+        type: string
+        required: false
+        default: "1536"
+      compress_level:
+        description: "zstd level. 0 = no compression"
+        type: string
+        required: false
+        default: "3"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: persistent-workspace
+  cancel-in-progress: false
+
+env:
+  IMG: /mnt/workspace-disk/disk.img
+  MNT: /snapdisk
+  CHUNKDIR: /home/runner/chunks
+  CONTAINER: workspace
+  IDE_PORT: "8080"
+  NOVNC_PORT: "6081"
+  GH_TOKEN: ${{ github.token }}
+  REPO: ${{ github.repository }}
+  BRANCH: ${{ github.event.repository.default_branch }}
+  SESSION_ID: ${{ inputs.session_id }}
+  MACHINE_ID: ${{ inputs.machine_id }}
+  SNAPSHOT_KEY: ${{ secrets.SNAPSHOT_KEY }}
+
+jobs:
+  workspace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+
+    steps:
+      - name: Checkout (shallow, for public.pem)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install required tools
+        run: |
+          set -euo pipefail
+          sudo apt-get -y install zstd jq xxd >/dev/null 2>&1 || true
+          df -h / /mnt
+
+      - name: Preflight and helpers
+        run: |
+          set -euo pipefail
+          [[ "$SESSION_ID" =~ ^[A-Za-z0-9-]+$ ]] || { echo "::error::bad session_id"; exit 1; }
+          [[ "$MACHINE_ID" =~ ^[A-Za-z0-9-]+$ ]] || { echo "::error::bad machine_id"; exit 1; }
+          if [ -z "$SNAPSHOT_KEY" ]; then
+            echo "::error::Repo secret SNAPSHOT_KEY is missing. Use 'Repair setup' in the web app."
+            exit 1
+          fi
+          [ -f public.pem ] || { echo "::error::public.pem missing from repo root"; exit 1; }
+          if [ "${{ inputs.mode }}" = "resume" ] && [ -z "${{ inputs.snapshot_tag }}" ]; then
+            echo "::error::mode=resume needs snapshot_tag"; exit 1
+          fi
+
+          cat > /home/runner/lib.sh <<'LIB'
+          # Hybrid encryption to the repo's RSA public key:
+          #   random AES-256-CBC key+iv encrypts the payload;
+          #   key+iv (48 bytes) is RSA-OAEP(SHA-256) wrapped.
+          # Output: {"v":1,"k":<b64 wrapped key>,"d":<b64 ciphertext>}
+          enc_to() {
+            local in="$1" out="$2" t key iv
+            t=$(mktemp -d)
+            key=$(openssl rand -hex 32); iv=$(openssl rand -hex 16)
+            openssl enc -aes-256-cbc -K "$key" -iv "$iv" -in "$in" -out "$t/ct"
+            printf '%s%s' "$key" "$iv" | xxd -r -p > "$t/kiv"
+            openssl pkeyutl -encrypt -pubin -inkey "${PUBPEM:-$GITHUB_WORKSPACE/public.pem}" \
+              -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 \
+              -pkeyopt rsa_mgf1_md:sha256 -in "$t/kiv" -out "$t/k"
+            jq -nc --arg k "$(base64 -w0 "$t/k")" --arg d "$(base64 -w0 "$t/ct")" \
+              '{v:1,k:$k,d:$d}' > "$out"
+            rm -rf "$t"
+          }
+
+          # Create/update a file in the repo through the contents API.
+          put_repo_file() {
+            local path="$1" file="$2" msg="$3" sha i args
+            for i in 1 2 3 4 5; do
+              sha=$(gh api "repos/$REPO/contents/$path?ref=$BRANCH" --jq .sha 2>/dev/null || true)
+              args=()
+              [ -n "$sha" ] && args+=(-f "sha=$sha")
+              if gh api -X PUT "repos/$REPO/contents/$path" -f "message=$msg" \
+                   -f "branch=$BRANCH" -f "content=$(base64 -w0 "$file")" \
+                   "${args[@]}" >/dev/null 2>&1; then
+                return 0
+              fi
+              sleep 3
+            done
+            echo "::warning::could not write $path"
+            return 1
+          }
+
+          # write_session <status> [ide_url] [ide_password] [desktop_url]
+          write_session() {
+            local f; f=$(mktemp)
+            jq -nc --arg sid "$SESSION_ID" --arg mid "$MACHINE_ID" --arg st "$1" \
+                   --arg ide "${2:-}" --arg pw "${3:-}" --arg vnc "${4:-}" \
+                   --arg t "$(date -u +%FT%TZ)" \
+                   '{session_id:$sid,machine_id:$mid,status:$st,ide_url:$ide,
+                     ide_password:$pw,desktop_url:$vnc,updated:$t}' > "$f.json"
+            enc_to "$f.json" "$f.enc"
+            put_repo_file session.enc "$f.enc" "session: $1"
+            rm -f "$f" "$f.json" "$f.enc"
+          }
+          LIB
+
+          source /home/runner/lib.sh
+          write_session starting || true
+
+      - name: Create fresh disk image
+        if: ${{ inputs.mode == 'new' }}
+        run: |
+          set -euo pipefail
+          sudo mkdir -p "$(dirname "$IMG")"
+          sudo truncate -s "${{ inputs.image_size }}" "$IMG"
+          sudo mkfs.ext4 -F -m 0 -i 65536 -L workspace "$IMG"
+          ls -lh "$IMG"; du -h --apparent-size "$IMG"; du -h "$IMG"
+
+      - name: Restore disk image from release chunks
+        if: ${{ inputs.mode == 'resume' }}
+        run: |
+          set -euo pipefail
+          TAG="${{ inputs.snapshot_tag }}"
+          sudo mkdir -p "$(dirname "$IMG")" "$CHUNKDIR"
+          sudo chown "$USER" "$(dirname "$IMG")" "$CHUNKDIR"
+
+          gh release download "$TAG" -p manifest.json -D "$CHUNKDIR" --clobber
+          MAN="$CHUNKDIR/manifest.json"
+
+          TOTAL=$(jq -r .image_bytes "$MAN")
+          CHUNK_MB=$(jq -r .chunk_mb "$MAN")
+          N=$(jq -r '.chunks | length' "$MAN")
+          COMP=$(jq -r .compression "$MAN")
+          ENC=$(jq -r '.encryption // "none"' "$MAN")
+          echo "restoring $TAG: $N chunks, compression=$COMP, encryption=$ENC"
+
+          truncate -s "$TOTAL" "$IMG"
+
+          dec() {
+            if [ "$ENC" = "aes256cbc-pbkdf2" ]; then
+              openssl enc -d -aes-256-cbc -pbkdf2 -pass env:SNAPSHOT_KEY -in "$1"
+            else
+              cat "$1"
+            fi
+          }
+          fetch_one() {
+            local idx="$1" name="$2" sha="$3"
+            local dest="$CHUNKDIR/$name"
+            for try in 1 2 3; do
+              rm -f "$dest"
+              if gh release download "$TAG" -p "$name" -D "$CHUNKDIR" --clobber; then
+                if [ "$(sha256sum "$dest" | cut -d' ' -f1)" = "$sha" ]; then
+                  break
+                fi
+                echo "checksum mismatch on $name (attempt $try)" >&2
+              fi
+              [ "$try" = 3 ] && { echo "::error::failed to fetch $name"; exit 1; }
+              sleep 5
+            done
+            local seek=$(( idx * CHUNK_MB ))
+            if [ "$COMP" = "zstd" ]; then
+              dec "$dest" | zstd -dc | dd of="$IMG" bs=1M seek="$seek" \
+                   conv=notrunc,sparse iflag=fullblock status=none
+            else
+              dec "$dest" | dd of="$IMG" bs=1M seek="$seek" \
+                   conv=notrunc,sparse iflag=fullblock status=none
+            fi
+            rm -f "$dest"
+            echo "restored chunk $idx/$N"
+          }
+          export -f fetch_one dec
+          export TAG CHUNKDIR IMG CHUNK_MB COMP ENC N GH_TOKEN SNAPSHOT_KEY
+
+          jq -r '.chunks[] | "\(.index)\t\(.name)\t\(.sha256)"' "$MAN" \
+            | xargs -P 4 -n 3 bash -c 'set -eo pipefail; fetch_one "$0" "$1" "$2"'
+
+          echo "Image reassembled:"; ls -lh "$IMG"; du -h "$IMG"
+          sudo e2fsck -p -f "$IMG" || true
+
+      - name: Mount image and move Docker onto it
+        run: |
+          set -euo pipefail
+          sudo mkdir -p "$MNT"
+          LOOP=$(sudo losetup --find --show "$IMG")
+          echo "LOOP=$LOOP" >> "$GITHUB_ENV"
+          sudo mount -o discard,noatime "$LOOP" "$MNT"
+          sudo mkdir -p "$MNT/docker" "$MNT/home"
+          df -h "$MNT"
+
+          sudo systemctl stop docker docker.socket containerd || true
+          echo '{ "data-root": "'"$MNT"'/docker", "storage-driver": "overlay2" }' \
+            | sudo tee /etc/docker/daemon.json
+          sudo systemctl start docker
+          sudo docker info --format 'Docker Root Dir: {{.DockerRootDir}}'
+
+      # Builds the image every run (cheap on resume: layer cache is on the
+      # persisted disk). Whether the CONTAINER is recreated depends on
+      # force_rebuild - see the next step.
+      - name: Build workspace image
+        run: |
+          set -euo pipefail
+          BUILD=$(mktemp -d)
+
+          cat > "$BUILD/entrypoint.sh" <<'EOS'
+          #!/usr/bin/env bash
+          set -u
+
+          IDE_PORT=8080
+          VNC_PORT=5901
+          NOVNC_PORT=6081
+
+          mkdir -p /root/.config/code-server /root/.vnc /var/log /workspace
+
+          CFG=/root/.config/code-server/config.yaml
+          if [ ! -f "$CFG" ]; then
+            PW=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 20)
+            cat > "$CFG" <<EOF
+          bind-addr: 0.0.0.0:$IDE_PORT
+          auth: password
+          password: $PW
+          cert: false
+          EOF
+          fi
+          rm -f /tmp/tunnel_url /tmp/vnc_tunnel_url /STOP
+
+          code-server >>/var/log/code-server.log 2>&1 &
+          for _ in $(seq 1 60); do
+            (echo >/dev/tcp/127.0.0.1/$IDE_PORT) >/dev/null 2>&1 && break
+            sleep 1
+          done
+
+          cat > /root/.vnc/xstartup <<'EOSX'
+          #!/bin/sh
+          unset SESSION_MANAGER
+          export XDG_CURRENT_DESKTOP="KDE"
+          export XDG_SESSION_TYPE="x11"
+          export XDG_RUNTIME_DIR="/tmp/xdg-runtime-root"
+          mkdir -p "$XDG_RUNTIME_DIR"; chmod 700 "$XDG_RUNTIME_DIR"
+          export KWIN_COMPOSE=N
+          export KWIN_OPENGL_INTERFACE=none
+          export QT_XCB_GL_INTEGRATION=none
+          exec startplasma-x11
+          EOSX
+          chmod +x /root/.vnc/xstartup
+
+          # DEBUG: -SecurityTypes None = NO password on the desktop. The
+          # tunnel URL is the only secret, and it is only ever written
+          # encrypted (session.enc).
+          supervise_xvnc() {
+            while true; do
+              pkill -9 -f 'Xvnc :1' >/dev/null 2>&1 || true
+              rm -f /tmp/.X1-lock /tmp/.X11-unix/X1
+              sleep 1
+              Xvnc :1 \
+                -geometry 1920x1080 -depth 24 \
+                -rfbport "$VNC_PORT" \
+                -SecurityTypes None \
+                -AlwaysShared -AcceptSetDesktopSize \
+                -desktop devbox \
+                >>/var/log/xvnc.log 2>&1
+              CODE=$?
+              echo "[entrypoint] Xvnc exited (code $CODE), restarting" >> /var/log/xvnc.log
+              sleep 2
+            done
+          }
+          supervise_xvnc &
+
+          for _ in $(seq 1 30); do
+            DISPLAY=:1 xdpyinfo >/dev/null 2>&1 && break
+            sleep 1
+          done
+          export DISPLAY=:1
+          dbus-launch --exit-with-session /root/.vnc/xstartup \
+            >>/var/log/plasma.log 2>&1 &
+
+          supervise_websockify() {
+            while true; do
+              websockify --web=/usr/share/novnc "$NOVNC_PORT" "127.0.0.1:$VNC_PORT" \
+                >>/var/log/websockify.log 2>&1
+              CODE=$?
+              echo "[entrypoint] websockify exited (code $CODE), restarting" >> /var/log/websockify.log
+              sleep 2
+            done
+          }
+          supervise_websockify &
+
+          supervise_tunnel() {
+            local port="$1" urlfile="$2" logfile="$3"
+            while true; do
+              : > "$logfile"
+              cloudflared tunnel --url "http://127.0.0.1:${port}" --no-autoupdate \
+                --logfile "$logfile" >>"$logfile" 2>&1 &
+              CF=$!
+              for _ in $(seq 1 90); do
+                URL=$(grep -ohE 'https://[a-z0-9-]+\.trycloudflare\.com' \
+                      "$logfile" 2>/dev/null | head -n1)
+                [ -n "${URL:-}" ] && { echo "$URL" > "$urlfile"; break; }
+                sleep 2
+              done
+              wait "$CF"
+              echo "[entrypoint] cloudflared ($port) exited, restarting" >> "$logfile"
+              rm -f "$urlfile"
+              sleep 3
+            done
+          }
+          supervise_tunnel "$IDE_PORT"   /tmp/tunnel_url     /var/log/cloudflared.log &
+          supervise_tunnel "$NOVNC_PORT" /tmp/vnc_tunnel_url /var/log/cloudflared-vnc.log &
+
+          wait -n
+          EOS
+
+          cat > "$BUILD/Dockerfile" <<'EOF'
+          FROM ubuntu:24.04
+          ENV DEBIAN_FRONTEND=noninteractive SHELL=/bin/bash
+          RUN apt-get update && apt-get install -y --no-install-recommends \
+                ca-certificates curl wget git openssh-client sudo nano vim \
+                build-essential python3 python3-pip python3-venv unzip zip \
+                jq htop tmux less locales dumb-init procps psmisc \
+                kde-plasma-desktop plasma-workspace kwin-x11 dolphin konsole \
+                tigervnc-standalone-server tigervnc-common \
+                dbus-x11 x11-xserver-utils x11-utils novnc websockify \
+              && rm -rf /var/lib/apt/lists/*
+          RUN curl -fsSL https://code-server.dev/install.sh | sh
+          RUN arch="$(dpkg --print-architecture)" \
+              && curl -fsSL -o /tmp/cf.deb \
+                 "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${arch}.deb" \
+              && dpkg -i /tmp/cf.deb && rm /tmp/cf.deb
+          RUN curl -L -o /tmp/firefox.tar.xz "https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US" \
+              && tar xf /tmp/firefox.tar.xz -C /opt \
+              && ln -sf /opt/firefox/firefox /usr/local/bin/firefox \
+              && rm /tmp/firefox.tar.xz
+          RUN ln -sf /usr/share/novnc/vnc.html /usr/share/novnc/index.html
+          COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+          RUN chmod +x /usr/local/bin/entrypoint.sh
+          WORKDIR /workspace
+          EXPOSE 8080 6081
+          ENTRYPOINT ["dumb-init","--","/usr/local/bin/entrypoint.sh"]
+          EOF
+
+          sudo docker build -t workspace:latest "$BUILD"
+
+      # If the container already exists and force_rebuild is false we just
+      # `docker start` it: its writable layer lives under Docker's data-root
+      # on the persisted disk, so the whole filesystem comes back as it was.
+      - name: Start or recreate container
+        run: |
+          set -euo pipefail
+          EXISTS=$(sudo docker ps -aq -f name="^${CONTAINER}$" || true)
+
+          if [ -n "$EXISTS" ] && [ "${{ inputs.force_rebuild }}" != "true" ]; then
+            echo "Existing container found - starting it as-is."
+            sudo docker start "$CONTAINER"
+          else
+            if [ -n "$EXISTS" ]; then
+              echo "force_rebuild=true - discarding existing container."
+            else
+              echo "No existing container - creating fresh."
+            fi
+            sudo docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+            sudo docker run -d --name "$CONTAINER" --restart unless-stopped \
+              --hostname devbox \
+              --shm-size=1g \
+              -v "$MNT/home:/root" \
+              -p 127.0.0.1:${IDE_PORT}:8080 \
+              -p 127.0.0.1:${NOVNC_PORT}:6081 \
+              workspace:latest
+          fi
+          sudo docker ps
+
+      - name: Publish connection details (encrypted)
+        run: |
+          set -uo pipefail
+          source /home/runner/lib.sh
+          URL=""; VNC_URL=""
+          for _ in $(seq 1 90); do
+            [ -z "$URL" ] && URL=$(sudo docker exec "$CONTAINER" cat /tmp/tunnel_url 2>/dev/null || true)
+            [ -z "$VNC_URL" ] && VNC_URL=$(sudo docker exec "$CONTAINER" cat /tmp/vnc_tunnel_url 2>/dev/null || true)
+            [ -n "$URL" ] && [ -n "$VNC_URL" ] && break
+            sleep 4
+          done
+          PW=$(sudo docker exec "$CONTAINER" \
+                 sed -n 's/^password: //p' /root/.config/code-server/config.yaml 2>/dev/null || true)
+          # Public repo => public logs. Mask everything sensitive.
+          for v in "$URL" "$VNC_URL" "$PW"; do [ -n "$v" ] && echo "::add-mask::$v"; done
+          [ -z "$URL" ] && echo "::warning::code-server tunnel not up yet"
+          [ -z "$VNC_URL" ] && echo "::warning::desktop tunnel not up yet"
+          DESK=""
+          [ -n "$VNC_URL" ] && DESK="${VNC_URL}/vnc.html?resize=scale&autoconnect=1"
+          write_session running "$URL" "$PW" "$DESK"
+          {
+            echo "## Workspace is up"
+            echo ""
+            echo "Connection details are encrypted in \`session.enc\`. Open the web app to see them."
+            echo ""
+            echo "Run \`touch /STOP\` in the IDE terminal to end the session and save a snapshot."
+            echo "Cancelling this run discards everything since the last snapshot."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Hold the session open
+        id: hold
+        run: |
+          set -uo pipefail
+          source /home/runner/lib.sh
+          MINUTES=${{ inputs.session_minutes }}
+          if [ "$MINUTES" -gt 240 ] || [ "$MINUTES" -le 0 ]; then MINUTES=240; fi
+          BUDGET=$(( MINUTES * 60 ))
+          START=$(date +%s)
+          LAST_URL=$(sudo docker exec "$CONTAINER" cat /tmp/tunnel_url 2>/dev/null || true)
+          LAST_VNC=$(sudo docker exec "$CONTAINER" cat /tmp/vnc_tunnel_url 2>/dev/null || true)
+          PW=$(sudo docker exec "$CONTAINER" \
+                 sed -n 's/^password: //p' /root/.config/code-server/config.yaml 2>/dev/null || true)
+          [ -n "$PW" ] && echo "::add-mask::$PW"
+          while true; do
+            NOW=$(date +%s); ELAPSED=$(( NOW - START ))
+            if [ "$ELAPSED" -ge "$BUDGET" ]; then
+              echo "Session budget reached."; echo "clean=true" >> "$GITHUB_OUTPUT"; break
+            fi
+            if sudo docker exec "$CONTAINER" test -f /STOP 2>/dev/null; then
+              echo "/STOP found - wrapping up."; echo "clean=true" >> "$GITHUB_OUTPUT"; break
+            fi
+            if ! sudo docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"; then
+              echo "::warning::Container is gone, restarting it."
+              sudo docker start "$CONTAINER" || true
+            fi
+
+            URL=$(sudo docker exec "$CONTAINER" cat /tmp/tunnel_url 2>/dev/null || true)
+            VNC=$(sudo docker exec "$CONTAINER" cat /tmp/vnc_tunnel_url 2>/dev/null || true)
+            if { [ -n "$URL" ] && [ "$URL" != "$LAST_URL" ]; } || \
+               { [ -n "$VNC" ] && [ "$VNC" != "$LAST_VNC" ]; }; then
+              for v in "$URL" "$VNC"; do [ -n "$v" ] && echo "::add-mask::$v"; done
+              LAST_URL="${URL:-$LAST_URL}"; LAST_VNC="${VNC:-$LAST_VNC}"
+              DESK=""; [ -n "$LAST_VNC" ] && DESK="${LAST_VNC}/vnc.html?resize=scale&autoconnect=1"
+              echo "tunnel URL changed - updating session.enc"
+              write_session running "$LAST_URL" "$PW" "$DESK"
+            fi
+
+            if [ $(( ELAPSED % 600 )) -lt 30 ]; then
+              printf '[%s] alive %dm/%dm\n' "$(date -u +%H:%M:%S)" $((ELAPSED/60)) $((BUDGET/60))
+              df -h "$MNT" | tail -n1
+            fi
+            sleep 30
+          done
+
+      # Everything below runs ONLY after a clean stop. On cancel or failure
+      # these steps are skipped: no snapshot, no upload.
+      - name: Quiesce and unmount the image
+        if: ${{ steps.hold.outputs.clean == 'true' }}
+        run: |
+          set -euo pipefail
+          source /home/runner/lib.sh
+          write_session snapshotting || true
+          sudo docker stop -t 60 "$CONTAINER" || true
+          sudo fstrim -v "$MNT" || true
+          sync
+          sudo systemctl stop docker docker.socket containerd || true
+          sudo umount "$MNT"
+          sudo e2fsck -p -f "$IMG" || true
+          echo "apparent: $(du -h --apparent-size "$IMG" | cut -f1)   on-disk: $(du -h "$IMG" | cut -f1)"
+
+      - name: Snapshot to a new release
+        if: ${{ steps.hold.outputs.clean == 'true' }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$CHUNKDIR/meta"
+          TS=$(date -u +%Y%m%dT%H%M%SZ)
+          TAG="snap-${TS}-${{ github.run_id }}"
+          CHUNK_MB=${{ inputs.chunk_mb }}
+          LEVEL=${{ inputs.compress_level }}
+          TOTAL=$(stat -c%s "$IMG")
+          CHUNK_B=$(( CHUNK_MB * 1024 * 1024 ))
+          N=$(( (TOTAL + CHUNK_B - 1) / CHUNK_B ))
+          if [ "$LEVEL" -gt 0 ]; then COMP=zstd; EXT=".zst"; else COMP=none; EXT=""; fi
+
+          PARENT=""
+          [ "${{ inputs.mode }}" = "resume" ] && PARENT="${{ inputs.snapshot_tag }}"
+
+          gh release create "$TAG" \
+            --title "Workspace snapshot $TS" \
+            --notes "Encrypted workspace snapshot (AES-256). Use the persistance-machine web app to resume."
+
+          upload_one() {
+            local i="$1"
+            local name; name=$(printf 'disk.part.%05d.img%s.enc' "$i" "$EXT")
+            local dest="$CHUNKDIR/$name"
+            # read chunk -> (zstd) -> AES-256 encrypt; only the small
+            # finished file ever touches disk.
+            if [ "$COMP" = zstd ]; then
+              sudo dd if="$IMG" bs=1M skip=$(( i * CHUNK_MB )) count="$CHUNK_MB" \
+                   iflag=fullblock status=none \
+                | zstd -q -T2 -"$LEVEL" \
+                | openssl enc -aes-256-cbc -pbkdf2 -pass env:SNAPSHOT_KEY -out "$dest"
+            else
+              sudo dd if="$IMG" bs=1M skip=$(( i * CHUNK_MB )) count="$CHUNK_MB" \
+                   iflag=fullblock status=none \
+                | openssl enc -aes-256-cbc -pbkdf2 -pass env:SNAPSHOT_KEY -out "$dest"
+            fi
+            local sha size
+            sha=$(sha256sum "$dest" | cut -d' ' -f1)
+            size=$(stat -c%s "$dest")
+            for try in 1 2 3; do
+              gh release upload "$TAG" "$dest" --clobber && break
+              [ "$try" = 3 ] && { echo "::error::upload failed for $name"; exit 1; }
+              sleep 10
+            done
+            rm -f "$dest"
+            jq -nc --argjson index "$i" --arg name "$name" \
+                   --arg sha256 "$sha" --argjson bytes "$size" \
+                   '{index:$index,name:$name,sha256:$sha256,bytes:$bytes}' \
+              > "$CHUNKDIR/meta/$(printf '%05d' "$i").json"
+            echo "uploaded chunk $i/$N ($(numfmt --to=iec "$size"))"
+          }
+          export -f upload_one
+          export IMG CHUNKDIR CHUNK_MB LEVEL COMP EXT TAG GH_TOKEN SNAPSHOT_KEY N
+
+          seq 0 $(( N - 1 )) | xargs -P 3 -n 1 bash -c 'set -eo pipefail; upload_one "$0"'
+
+          jq -s --arg tag "$TAG" --arg ts "$TS" --arg comp "$COMP" \
+                --argjson total "$TOTAL" --argjson cmb "$CHUNK_MB" \
+                --argjson level "$LEVEL" --arg parent "${PARENT:-}" \
+                --arg run "${{ github.run_id }}" \
+             '{schema:2, tag:$tag, created_utc:$ts, image_bytes:$total,
+               chunk_mb:$cmb, compression:$comp, compression_level:$level,
+               encryption:"aes256cbc-pbkdf2",
+               filesystem:"ext4", parent:$parent, run_id:$run,
+               chunks: (. | sort_by(.index))}' \
+             "$CHUNKDIR"/meta/*.json > "$CHUNKDIR/manifest.json"
+          gh release upload "$TAG" "$CHUNKDIR/manifest.json" --clobber
+
+          UPLOADED=$(jq '[.chunks[].bytes] | add' "$CHUNKDIR/manifest.json")
+
+          # Registry record, committed LAST: a snapshot only "exists" for the
+          # web app once every chunk and the manifest are safely uploaded.
+          source /home/runner/lib.sh
+          jq -nc --arg mid "$MACHINE_ID" --arg tag "$TAG" --arg ts "$TS" \
+                 --arg parent "${PARENT:-}" --arg comp "$COMP" \
+                 --arg run "${{ github.run_id }}" --arg sid "$SESSION_ID" \
+                 --argjson total "$TOTAL" --argjson up "$UPLOADED" \
+                 --argjson n "$N" --argjson cmb "$CHUNK_MB" \
+                 '{machine_id:$mid,tag:$tag,created_utc:$ts,parent:$parent,
+                   image_bytes:$total,uploaded_bytes:$up,chunk_count:$n,
+                   chunk_mb:$cmb,compression:$comp,run_id:$run,session_id:$sid}' \
+            > "$CHUNKDIR/record.json"
+          enc_to "$CHUNKDIR/record.json" "$CHUNKDIR/record.enc"
+          put_repo_file "snapshots/$TAG.enc" "$CHUNKDIR/record.enc" "snapshot $TAG"
+          write_session done || true
+
+          {
+            echo ""
+            echo "## Snapshot saved"
+            echo ""
+            echo "- Tag: \`$TAG\`"
+            echo "- Chunks: $N x ${CHUNK_MB} MiB windows, $COMP, encrypted"
+            echo "- Uploaded: $(numfmt --to=iec "$UPLOADED") (image is $(numfmt --to=iec "$TOTAL") virtual)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Tear down
+        if: ${{ always() }}
+        run: |
+          sudo umount "$MNT" 2>/dev/null || true
+          [ -n "${LOOP:-}" ] && sudo losetup -d "$LOOP" 2>/dev/null || true
+          sudo rm -f "$IMG" || true
+          df -h / /mnt || true
+
+</script>
+
+<script>
+"use strict";
+const REPO_NAME = "persistance-machine";
+const WF_FILE   = "persistent-workspace.yml";
+const WF_PATH   = ".github/workflows/" + WF_FILE;
+const PBKDF_ITER = 800000;
+const API = "https://api.github.com";
+
+// <crypto>
+const te = new TextEncoder(), td = new TextDecoder();
+const b64 = u8 => { let s = ""; const c = 0x8000;
+  for (let i = 0; i < u8.length; i += c) s += String.fromCharCode.apply(null, u8.subarray(i, i + c));
+  return btoa(s); };
+const unb64 = s => Uint8Array.from(atob(s.replace(/\s/g, "")), c => c.charCodeAt(0));
+const cat = (...a) => { const o = new Uint8Array(a.reduce((n, x) => n + x.length, 0)); let p = 0;
+  for (const x of a) { o.set(x, p); p += x.length; } return o; };
+const rand = n => crypto.getRandomValues(new Uint8Array(n));
+const hex = u8 => Array.from(u8, b => b.toString(16).padStart(2, "0")).join("");
+
+async function pwKey(pw, salt, iter) {
+  const base = await crypto.subtle.importKey("raw", te.encode(pw), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: iter, hash: "SHA-256" },
+    base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+}
+async function sealVault(obj, pw) {
+  const salt = rand(16), iv = rand(12), k = await pwKey(pw, salt, PBKDF_ITER);
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, k, te.encode(JSON.stringify(obj)));
+  return { v: 1, kdf: "PBKDF2-SHA256", iter: PBKDF_ITER, salt: b64(salt), iv: b64(iv), ct: b64(new Uint8Array(ct)) };
+}
+async function openVault(v, pw) {
+  try {
+    const k = await pwKey(pw, unb64(v.salt), v.iter);
+    const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(v.iv) }, k, unb64(v.ct));
+    return JSON.parse(td.decode(pt));
+  } catch (e) { throw new Error("Wrong password, or the vault file is damaged."); }
+}
+async function genKeys() {
+  const kp = await crypto.subtle.generateKey({ name: "RSA-OAEP", modulusLength: 3072,
+    publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }, true, ["encrypt", "decrypt"]);
+  return { pub: new Uint8Array(await crypto.subtle.exportKey("spki", kp.publicKey)),
+           priv: new Uint8Array(await crypto.subtle.exportKey("pkcs8", kp.privateKey)) };
+}
+const pemOf = spki => "-----BEGIN PUBLIC KEY-----\n" + b64(spki).match(/.{1,64}/g).join("\n") + "\n-----END PUBLIC KEY-----\n";
+const importPub  = s => crypto.subtle.importKey("spki",  s, { name: "RSA-OAEP", hash: "SHA-256" }, false, ["encrypt"]);
+const importPriv = s => crypto.subtle.importKey("pkcs8", s, { name: "RSA-OAEP", hash: "SHA-256" }, false, ["decrypt"]);
+// Same envelope the workflow's enc_to() produces: AES-256-CBC(key,iv) + RSA-OAEP-SHA256(key||iv)
+async function hybridEnc(obj, pubKey) {
+  const key = rand(32), iv = rand(16);
+  const aes = await crypto.subtle.importKey("raw", key, "AES-CBC", false, ["encrypt"]);
+  const ct = await crypto.subtle.encrypt({ name: "AES-CBC", iv }, aes, te.encode(JSON.stringify(obj)));
+  const k = await crypto.subtle.encrypt({ name: "RSA-OAEP" }, pubKey, cat(key, iv));
+  return { v: 1, k: b64(new Uint8Array(k)), d: b64(new Uint8Array(ct)) };
+}
+async function hybridDec(env, privKey) {
+  const kiv = new Uint8Array(await crypto.subtle.decrypt({ name: "RSA-OAEP" }, privKey, unb64(env.k)));
+  const aes = await crypto.subtle.importKey("raw", kiv.slice(0, 32), "AES-CBC", false, ["decrypt"]);
+  const pt = await crypto.subtle.decrypt({ name: "AES-CBC", iv: kiv.slice(32, 48) }, aes, unb64(env.d));
+  return JSON.parse(td.decode(pt));
+}
+// </crypto>
+
+/* ---------------- state ---------------- */
+const S = { user: null, pat: null, branch: "main", priv: null, pubKey: null, pubRaw: null, snapKey: null,
+            machines: [], snaps: [], sel: null, open: {}, active: null, bad: [], pending: {}, notes: {}, notesLocal: {}, starting: false };
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+             set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+             del(k) { try { localStorage.removeItem(k); } catch {} } };
+const adv = () => Object.assign({ minutes: 240, chunk: 1536, level: 3, force: false }, ls.get("pm_adv", {}));
+function toast(msg, ms = 3200) { const t = $("toast"); t.textContent = msg; t.classList.remove("hidden");
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.add("hidden"), ms); }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---------------- GitHub API ---------------- */
+async function gh(path, { method = "GET", body, auth = true } = {}) {
+  const h = { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
+  if (auth && S.pat) h.Authorization = "Bearer " + S.pat;
+  if (body) h["Content-Type"] = "application/json";
+  const r = await fetch(path.startsWith("http") ? path : API + path,
+    { method, headers: h, body: body ? JSON.stringify(body) : undefined, cache: "no-store" });
+  if (r.status === 204) return null;
+  let j = null; try { j = await r.json(); } catch {}
+  if (!r.ok) { const e = new Error((j && j.message) || ("HTTP " + r.status)); e.status = r.status; e.data = j; throw e; }
+  return j;
+}
+const repoPath = p => `/repos/${S.user}/${REPO_NAME}${p}`;
+const fileText = f => td.decode(unb64(f.content));
+async function getFile(path, auth = true) {
+  try { return await gh(repoPath("/contents/" + path), { auth }); }
+  catch (e) { if (e.status === 404) return null; throw e; }
+}
+async function putFile(path, content, msg) {
+  const bytes = typeof content === "string" ? te.encode(content) : content;
+  let last;
+  for (let i = 0; i < 4; i++) {
+    try {
+      const ex = await getFile(path);
+      return await gh(repoPath("/contents/" + path), { method: "PUT",
+        body: { message: msg, content: b64(bytes), branch: S.branch, ...(ex ? { sha: ex.sha } : {}) } });
+    } catch (e) { last = e; if (![404, 409, 422].includes(e.status)) break; await sleep(1500); }
+  }
+  if (last && last.status === 404 && /workflows\//.test(path))
+    last.message += " (token probably lacks the 'workflow' scope)";
+  throw last;
+}
+const WF_TEXT = () => $("wf").textContent.replace(/^\n/, "");
+
+let sodiumP = null;
+function loadSodium() {
+  if (sodiumP) return sodiumP;
+  sodiumP = (async () => {
+    for (const u of ["https://esm.sh/libsodium-wrappers@0.7.13", "https://cdn.jsdelivr.net/npm/libsodium-wrappers@0.7.13/+esm"]) {
+      try { const m = await import(u); const s = m.default || m; await s.ready; return s; } catch {}
+    }
+    sodiumP = null;
+    throw new Error("Could not load the libsodium library (needed to store the snapshot secret in GitHub). Check your connection and retry.");
+  })();
+  return sodiumP;
+}
+async function setSecret(name, value) {
+  const pk = await gh(repoPath("/actions/secrets/public-key"));
+  const sodium = await loadSodium();
+  const bin = sodium.from_base64(pk.key, sodium.base64_variants.ORIGINAL);
+  const sealed = sodium.crypto_box_seal(sodium.from_string(value), bin);
+  await gh(repoPath("/actions/secrets/" + name), { method: "PUT",
+    body: { encrypted_value: sodium.to_base64(sealed, sodium.base64_variants.ORIGINAL), key_id: pk.key_id } });
+}
+
+/* ---------------- auth flows ---------------- */
+function showAuthTab(which) {
+  const login = which === "login";
+  $("tab-login").setAttribute("aria-selected", login); $("tab-signup").setAttribute("aria-selected", !login);
+  $("login-form").classList.toggle("hidden", !login); $("signup-form").classList.toggle("hidden", login);
+}
+$("tab-login").onclick = () => showAuthTab("login");
+$("tab-signup").onclick = () => showAuthTab("signup");
+$("li-user").value = ls.get("pm_user", "");
+
+async function unlock(secrets) {
+  S.pat = secrets.pat; S.snapKey = secrets.snapKey; S.pubRaw = unb64(secrets.pub);
+  S.priv = await importPriv(unb64(secrets.priv)); S.pubKey = await importPub(S.pubRaw);
+}
+
+$("login-form").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const btn = $("li-btn"), err = $("li-err"); err.textContent = ""; btn.disabled = true; btn.textContent = "Unlocking…";
+  try {
+    S.user = $("li-user").value.trim();
+    const f = await getFile("vault.json", false);
+    if (!f) throw new Error(`No vault found at github.com/${S.user}/${REPO_NAME}. Sign up first.`);
+    await unlock(await openVault(JSON.parse(fileText(f)), $("li-pw").value));
+    const repo = await gh(repoPath(""));
+    S.branch = repo.default_branch;
+    ls.set("pm_user", S.user);
+    $("li-pw").value = "";
+    await enterApp();
+  } catch (e) { err.textContent = e.message; S.pat = null; }
+  finally { btn.disabled = false; btn.textContent = "Log in"; }
+});
+
+$("signup-form").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const err = $("su-err"), btn = $("su-btn"), steps = $("su-steps");
+  err.textContent = ""; steps.innerHTML = "";
+  const step = t => { steps.querySelectorAll(".cur").forEach(x => x.classList.remove("cur"));
+    const li = document.createElement("li"); li.className = "cur"; li.textContent = t; steps.appendChild(li); };
+  const pat = $("su-pat").value.trim(), pw = $("su-pw").value;
+  if (pw !== $("su-pw2").value) { err.textContent = "Passwords do not match."; return; }
+  if (pw.length < 12) { err.textContent = "Use at least 12 characters."; return; }
+  btn.disabled = true;
+  try {
+    step("Checking token");
+    const r = await fetch(API + "/user", { headers: { Authorization: "Bearer " + pat, Accept: "application/vnd.github+json" }, cache: "no-store" });
+    if (!r.ok) throw new Error("GitHub rejected this token.");
+    const scopes = r.headers.get("x-oauth-scopes");
+    if (scopes !== null) {
+      const s = scopes.split(",").map(x => x.trim());
+      if (!s.includes("repo") || !s.includes("workflow"))
+        throw new Error(`Token needs the "repo" and "workflow" scopes (it has: ${scopes || "none"}).`);
+    }
+    S.pat = pat; S.user = (await r.json()).login;
+
+    step(`Creating github.com/${S.user}/${REPO_NAME}`);
+    let repo;
+    try { repo = await gh("/user/repos", { method: "POST", body: { name: REPO_NAME, private: false, auto_init: true,
+            description: "Persistent cloud workspaces. Contents are encrypted." } }); }
+    catch (e) { if (e.status !== 422) throw e; repo = await gh(repoPath("")); }
+    S.branch = repo.default_branch;
+    if (await getFile("vault.json")) throw new Error("This account is already set up. Use Log in.");
+
+    step("Generating keys (a few seconds)");
+    const keys = await genKeys();
+    const snapKey = b64(rand(32));
+
+    step("Storing snapshot encryption secret in the repo");
+    await setSecret("SNAPSHOT_KEY", snapKey);
+
+    step("Uploading workflow");
+    await putFile(WF_PATH, WF_TEXT(), "Add workflow");
+    step("Uploading public key");
+    await putFile("public.pem", pemOf(keys.pub), "Add public key");
+
+    step("Encrypting and storing your vault");
+    const vault = await sealVault({ pat, priv: b64(keys.priv), pub: b64(keys.pub), snapKey }, pw);
+    await putFile("vault.json", JSON.stringify(vault, null, 2), "Add encrypted vault");
+
+    await unlock({ pat, priv: b64(keys.priv), pub: b64(keys.pub), snapKey });
+    ls.set("pm_user", S.user);
+    $("su-pat").value = $("su-pw").value = $("su-pw2").value = "";
+    await enterApp();
+  } catch (e) { err.textContent = e.message; S.pat = null; }
+  finally { btn.disabled = false; }
+});
+
+function logout() {
+  clearInterval(pollT); pollT = null;
+  Object.assign(S, { pat: null, priv: null, pubKey: null, snapKey: null, machines: [], snaps: [], sel: null, active: null });
+  $("app").classList.add("hidden"); $("auth").classList.remove("hidden");
+}
+
+/* ---------------- app data ---------------- */
+const recCache = new Map();
+async function loadRecord(entry) {
+  if (recCache.has(entry.sha)) return recCache.get(entry.sha);
+  try {
+    const b = await gh(repoPath("/git/blobs/" + entry.sha));
+    const obj = await hybridDec(JSON.parse(td.decode(unb64(b.content))), S.priv);
+    recCache.set(entry.sha, obj); return obj;
+  } catch (e) { console.error("record", entry.name, e); S.bad.push(entry.name + ": " + e.message); return null; }
+}
+async function fetchDir(dir) {
+  try { return await gh(repoPath("/contents/" + dir)); }
+  catch (e) { if (e.status === 404) return []; throw e; }
+}
+const tsDate = t => new Date(String(t).replace(/^(\d{4})(\d\d)(\d\d)T(\d\d)(\d\d)(\d\d)Z$/, "$1-$2-$3T$4:$5:$6Z"));
+const fmtDate = d => d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+const fmtBytes = n => { const u = ["B", "KB", "MB", "GB", "TB"]; let i = 0; n = Number(n) || 0;
+  while (n >= 1024 && i < 4) { n /= 1024; i++; } return n.toFixed(i > 1 ? 1 : 0) + " " + u[i]; };
+
+async function refreshData() {
+  S.bad = [];
+  const [ms, ss, ns] = await Promise.all([fetchDir("machines"), fetchDir("snapshots"), fetchDir("notes")]);
+  const ok = e => e.type === "file" && e.name.endsWith(".enc");
+  const found = (await Promise.all(ms.filter(ok).map(loadRecord))).filter(Boolean);
+  for (const id of Object.keys(S.pending)) {
+    if (found.some(m => m.id === id)) delete S.pending[id]; else found.push(S.pending[id]);
+  }
+  S.machines = found.sort((a, b) => a.name.localeCompare(b.name));
+  S.notes = {};
+  for (const n of (await Promise.all(ns.filter(ok).map(loadRecord))).filter(Boolean)) S.notes[n.session_id] = n.text;
+  Object.assign(S.notes, S.notesLocal);
+  S.snaps = (await Promise.all(ss.filter(ok).map(loadRecord))).filter(Boolean)
+    .sort((a, b) => tsDate(b.created_utc) - tsDate(a.created_utc));
+  if (!S.machines.find(m => m.id === S.sel)) S.sel = S.machines[0]?.id ?? null;
+  renderList(); renderMachine();
+}
+const snapsOf = id => S.snaps.filter(s => s.machine_id === id);
+const activeMachineId = () => S.active && (S.active.machineId || S.active.session?.machine_id) || null;
+const sessionLive = () => S.active && !(S.active.run && S.active.run.status === "completed");
+
+async function enterApp() {
+  $("auth").classList.add("hidden"); $("app").classList.remove("hidden");
+  $("who").textContent = S.user;
+  $("machine").innerHTML = `<p class="note">Loading…</p>`;
+  try { await refreshData(); }
+  catch (e) {
+    console.error(e);
+    $("machine").innerHTML = `<p class="err">Could not load machines: ${esc(e.message)}</p><button class="btn" id="a-retry">Retry</button>`;
+    $("a-retry").onclick = enterApp;
+  }
+  await adoptRunningSession();
+  renderSession();
+}
+
+/* ---------------- rendering ---------------- */
+function monitor(state) {
+  const on = state === "on", busy = state === "busy";
+  const fill = on ? "var(--screen-on)" : "var(--screen-off)";
+  return `<svg viewBox="0 0 72 60" width="100%" aria-hidden="true">
+    <rect x="4" y="4" width="64" height="40" rx="3" fill="none" stroke="var(--mute)" stroke-width="2.5"/>
+    <rect x="8" y="8" width="56" height="32" rx="1" fill="${fill}"/>
+    ${on ? `<path d="M13 15h26M13 21h34M13 27h20" stroke="#9db8ff" stroke-width="2" stroke-linecap="round"/>` : ""}
+    ${busy ? `<circle cx="36" cy="24" r="6" fill="none" stroke="var(--warn)" stroke-width="2" stroke-dasharray="20 18"/>` : ""}
+    <path d="M28 52h16M36 44v8" stroke="var(--mute)" stroke-width="2.5" stroke-linecap="round"/></svg>`;
+}
+function machState(m) {
+  if (sessionLive() && activeMachineId() === m.id) {
+    const st = S.active.session?.status;
+    return st === "running" ? "on" : "busy";
+  }
+  return "off";
+}
+function renderList() {
+  const el = $("list");
+  if (!S.machines.length) { el.innerHTML = `<div class="empty">No machines yet.<br>Use <b>New machine</b> to create one.</div>`; return; }
+  el.innerHTML = S.machines.map(m => {
+    const st = machState(m), n = snapsOf(m.id).length;
+    const sub = st === "on" ? "Running" : st === "busy" ? "Starting / saving" : "Powered off";
+    return `<button class="m-item" data-id="${esc(m.id)}" aria-current="${m.id === S.sel}">
+      <div>${monitor(st)}</div>
+      <div><div class="n">${esc(m.name)}</div>
+      <div class="s"><span class="dot ${st === "on" ? "on" : st === "busy" ? "busy" : ""}"></span>${sub} · ${n} snapshot${n === 1 ? "" : "s"}</div></div></button>`;
+  }).join("");
+  el.querySelectorAll(".m-item").forEach(b => b.onclick = () => { S.sel = b.dataset.id; renderList(); renderMachine(); });
+}
+// Lane assignment: a snapshot continues its parent's lane if it is the parent's
+// first child; any further child of the same parent starts a new lane (a branch).
+function layoutLanes(list) {
+  const byTag = new Map(list.map(s => [s.tag, s]));
+  const lane = new Map(), kids = new Map(); let next = 0;
+  for (const s of [...list].reverse()) {           // oldest first
+    const p = byTag.has(s.parent) ? s.parent : null;
+    if (p && !kids.get(p)) { kids.set(p, 1); lane.set(s.tag, lane.get(p)); }
+    else { if (p) kids.set(p, kids.get(p) + 1); lane.set(s.tag, next++); }
+  }
+  return { lane, count: next, kids };
+}
+function graphHtml(list, locked) {
+  if (!list.length) return `<div class="tree"><div class="trow" style="padding-left:14px"><span class="s">No snapshots yet. One is saved each time a session ends with <code>touch /STOP</code>.</span></div></div>`;
+  const ROW = 64, LW = 20, X0 = 14;
+  const { lane, count, kids } = layoutLanes(list);
+  const idx = new Map(list.map((s, i) => [s.tag, i]));
+  const W = X0 + count * LW, H = list.length * ROW;
+  const col = l => `hsl(${(l * 67 + 215) % 360} 62% 52%)`;
+  const X = l => X0 + l * LW, Y = i => i * ROW + ROW / 2;
+  let paths = "", nodes = "";
+  list.forEach((s, i) => {
+    const l = lane.get(s.tag), x = X(l), y = Y(i);
+    if (idx.has(s.parent)) {
+      const pl = lane.get(s.parent), px = X(pl), py = Y(idx.get(s.parent));
+      paths += pl === l ? `<path d="M${x} ${y}V${py}" stroke="${col(l)}" stroke-width="2" fill="none"/>`
+        : `<path d="M${x} ${y}V${py - 18}Q${x} ${py} ${px} ${py}" stroke="${col(l)}" stroke-width="2" fill="none"/>`;
+    }
+    nodes += `<circle cx="${x}" cy="${y}" r="5.5" fill="${col(l)}" stroke="var(--panel2)" stroke-width="2"/>`;
+  });
+  const rows = list.map((s, i) => {
+    const note = S.notes[s.session_id] || "";
+    const branch = (kids.get(s.tag) || 0) > 1 ? '<span class="badge" style="color:var(--warn);border-color:var(--warn)">branch point</span>' : "";
+    return `<div class="trow" style="padding-left:${W + 8}px">
+      <div style="min-width:0"><div class="t">${esc(fmtDate(tsDate(s.created_utc)))}${i === 0 ? '<span class="badge">latest</span>' : ""}${branch}</div>
+        <div class="desc ${note ? "" : "none"}" title="${esc(note)}">${esc(note || "No description")}</div>
+        <div class="s">${esc(fmtBytes(s.uploaded_bytes))} · ${esc(s.tag)}</div></div>
+      <button class="btn sm" data-edit="${esc(s.tag)}" title="Edit description">Edit</button>
+      <button class="btn sm" data-tag="${esc(s.tag)}" ${locked ? "disabled" : ""}>Resume this</button></div>`;
+  }).join("");
+  return `<div class="tree"><svg width="${W}" height="${H}" aria-hidden="true">${paths}${nodes}</svg>${rows}</div>`;
+}
+function renderMachine() {
+  const el = $("machine"), m = S.machines.find(x => x.id === S.sel);
+  const bad = S.bad.length ? `<p class="err">${S.bad.length} record(s) could not be read:\n${esc(S.bad.join("\n"))}</p>` : "";
+  if (!m) { el.innerHTML = bad + `<p class="note">Select or create a machine.</p>`; return; }
+  const list = snapsOf(m.id), latest = list[0], st = machState(m), locked = sessionLive();
+  const open = !!S.open[m.id];
+  el.innerHTML = bad + `
+    <div class="d-head">
+      <div>${monitor(st)}</div>
+      <div>
+        <h2>${esc(m.name)}</h2>
+        <div class="meta"><span>Disk ${esc(m.size)}</span><span>Created ${esc(fmtDate(new Date(m.created)))}</span>
+          <span>${latest ? "Last saved " + esc(fmtDate(tsDate(latest.created_utc))) : "Never started"}</span>
+          <span>id <code>${esc(m.id)}</code></span></div>
+        <div class="actions">
+          ${latest
+            ? `<button class="btn primary" id="a-resume" ${locked ? "disabled" : ""}>Resume latest</button>`
+            : `<button class="btn primary" id="a-start" ${locked ? "disabled" : ""}>Start (fresh disk)</button>`}
+        </div>
+        ${locked ? `<p class="note" style="margin-top:8px">Another session is active. Only one runs at a time.</p>` : ""}
+      </div>
+    </div>
+    <div class="snaps" data-open="${open}">
+      <button class="tog" id="a-tog" aria-expanded="${open}"><span class="chev">&#9656;</span> Snapshots (${list.length})</button>
+      ${open ? graphHtml(list, locked) : ""}
+    </div>`;
+  $("a-tog").onclick = () => { S.open[m.id] = !S.open[m.id]; renderMachine(); };
+  $("a-resume") && ($("a-resume").onclick = () => openStart(m, latest.tag));
+  $("a-start") && ($("a-start").onclick = () => openStart(m, null));
+  el.querySelectorAll("[data-tag]").forEach(b => b.onclick = () => openStart(m, b.dataset.tag));
+  el.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => editNote(list.find(s => s.tag === b.dataset.edit)));
+}
+
+/* ---------------- sessions ---------------- */
+let pollT = null;
+async function findRun(sid) {
+  const r = await gh(repoPath(`/actions/workflows/${WF_FILE}/runs?event=workflow_dispatch&per_page=15`));
+  return r.workflow_runs.find(x => x.display_title === "ws " + sid) || null;
+}
+async function adoptRunningSession() {
+  try {
+    const r = await gh(repoPath(`/actions/workflows/${WF_FILE}/runs?per_page=10`));
+    const live = r.workflow_runs.find(x => x.status !== "completed" && (x.display_title || "").startsWith("ws "));
+    if (!live) { ls.del("pm_active"); return; }
+    const sid = live.display_title.slice(3), saved = ls.get("pm_active", null);
+    S.active = { sid, machineId: saved && saved.sid === sid ? saved.machineId : null, runId: live.id, run: live, session: null, sha: null, t0: Date.parse(live.created_at) };
+    startPolling(); renderList(); renderMachine();
+  } catch {}
+}
+function openStart(m, tag) {
+  if (sessionLive()) return toast("A session is already running. Only one at a time.");
+  S.pendingStart = { m, tag };
+  const base = tag ? S.snaps.find(s => s.tag === tag) : null;
+  $("sd-title").textContent = (tag ? "Resume " : "Start ") + m.name;
+  if (base) {
+    const note = S.notes[base.session_id];
+    const branching = S.snaps.some(s => s.parent === tag);
+    $("sd-base").textContent = `From the snapshot of ${fmtDate(tsDate(base.created_utc))}${note ? " (" + note + ")" : ""}. ` +
+      (branching ? "It already has a follow-up, so saving will start a new branch." : "Saving will add the next snapshot after it.");
+  } else $("sd-base").textContent = "Fresh disk.";
+  $("sd-desc").value = tag ? "" : (m.desc || "");
+  $("dlg-start").showModal(); $("sd-desc").focus();
+}
+$("sd-cancel").onclick = () => $("dlg-start").close();
+$("start-form").addEventListener("submit", ev => {
+  ev.preventDefault();
+  const { m, tag } = S.pendingStart; $("dlg-start").close();
+  startSession(m, tag, $("sd-desc").value.trim());
+});
+function editNote(s) {
+  S.pendingNote = s;
+  $("en-desc").value = S.notes[s.session_id] || "";
+  $("dlg-editnote").showModal(); $("en-desc").focus();
+}
+$("en-cancel").onclick = () => $("dlg-editnote").close();
+$("editnote-form").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const s = S.pendingNote; $("dlg-editnote").close();
+  try {
+    await saveNote(s.session_id, s.machine_id, $("en-desc").value.trim());
+    renderMachine();
+  } catch (e) { toast("Could not save: " + e.message, 6000); }
+});
+async function saveNote(sid, machineId, text) {
+  const rec = { session_id: sid, machine_id: machineId, text };
+  await putFile(`notes/${sid}.enc`, JSON.stringify(await hybridEnc(rec, S.pubKey)), "note");
+  S.notesLocal[sid] = text; S.notes[sid] = text;
+}
+async function liveRunOnGitHub() {
+  const r = await gh(repoPath(`/actions/workflows/${WF_FILE}/runs?per_page=20`));
+  return r.workflow_runs.find(x => x.status !== "completed" && (x.display_title || "").startsWith("ws ")) || null;
+}
+async function startSession(m, tag, note) {
+  if (S.starting || sessionLive()) return toast("A session is already running. Only one at a time.");
+  S.starting = true;
+  try {
+    // Ask GitHub, not just this tab: another tab/device may already have one running.
+    if (await liveRunOnGitHub()) {
+      await adoptRunningSession(); renderSession();
+      return toast("Another session is already running. Only one at a time.", 5000);
+    }
+    const a = adv(), sid = hex(rand(6));
+    if (note) await saveNote(sid, m.id, note);
+    await gh(repoPath(`/actions/workflows/${WF_FILE}/dispatches`), { method: "POST", body: { ref: S.branch, inputs: {
+      machine_id: m.id, session_id: sid, mode: tag ? "resume" : "new", snapshot_tag: tag || "",
+      force_rebuild: String(!!a.force), session_minutes: String(a.minutes), image_size: m.size || "70G",
+      chunk_mb: String(a.chunk), compress_level: String(a.level) } } });
+    S.active = { sid, machineId: m.id, runId: null, run: null, session: null, sha: null, t0: Date.now() };
+    ls.set("pm_active", { sid, machineId: m.id });
+    startPolling(); renderList(); renderMachine(); renderSession();
+  } catch (e) { toast("Could not start: " + e.message, 7000); }
+  finally { S.starting = false; }
+}
+function startPolling() { clearInterval(pollT); pollT = setInterval(poll, 5000); poll(); }
+async function poll() {
+  const a = S.active; if (!a) return;
+  try {
+    if (!a.runId) {
+      const r = await findRun(a.sid);
+      if (r) { a.runId = r.id; a.run = r; }
+      else if (Date.now() - a.t0 > 90000) a.err = "The run did not appear. Check the Actions tab of your repo (is the workflow file present?).";
+    } else a.run = await gh(repoPath("/actions/runs/" + a.runId));
+    const f = await getFile("session.enc");
+    if (f && f.sha !== a.sha) {
+      a.sha = f.sha;
+      const s = await hybridDec(JSON.parse(fileText(f)), S.priv);
+      if (s.session_id === a.sid) { a.session = s; if (!a.machineId) a.machineId = s.machine_id; }
+    }
+    if (!a.err || a.runId) delete a.err;
+  } catch (e) { a.err = e.message; }
+  renderSession(); renderList();
+  if (a.run && a.run.status === "completed" && !a.finished) {
+    a.finished = true; clearInterval(pollT); pollT = null; ls.del("pm_active");
+    try { await refreshData(); } catch {}
+    renderMachine();
+  }
+}
+async function cancelRun() {
+  const a = S.active; if (!a) return;
+  const saving = a.session?.status === "snapshotting";
+  if (!confirm(saving ? "The snapshot is still being saved. Cancelling now discards this session and saves NOTHING. Cancel anyway?"
+                      : "Cancel the run? Everything since the last snapshot is discarded and nothing is uploaded.")) return;
+  try {
+    if (!a.runId) { const r = await findRun(a.sid); if (r) a.runId = r.id; }
+    if (!a.runId) throw new Error("Run not found yet, try again in a few seconds.");
+    await gh(repoPath(`/actions/runs/${a.runId}/cancel`), { method: "POST" });
+    a.cancelling = true; toast("Cancel requested."); poll();
+  } catch (e) { toast("Cancel failed: " + e.message, 6000); }
+}
+function dismissSession() { S.active = null; renderSession(); renderList(); renderMachine(); }
+function renderSession() {
+  const el = $("session"), a = S.active;
+  if (!a) { el.innerHTML = ""; return; }
+  const m = S.machines.find(x => x.id === (a.machineId || a.session?.machine_id));
+  const title = m ? esc(m.name) : "Session";
+  const runUrl = a.run?.html_url ? `<a href="${esc(a.run.html_url)}" target="_blank" rel="noopener">View run log</a>` : "";
+  const st = a.session?.status, run = a.run;
+  let cls = "", head = "", body = "", ctrl = "";
+  if (run && run.status === "completed") {
+    const c = run.conclusion;
+    if (c === "success") { cls = "done"; head = "Snapshot saved"; body = "The machine is powered off. It now appears under Snapshots as the latest one."; }
+    else if (c === "cancelled") { cls = "bad"; head = "Cancelled"; body = "Nothing was saved. Your previous snapshots are untouched."; }
+    else { cls = "bad"; head = "Run failed"; body = "Nothing was saved. Check the run log for the reason."; }
+    ctrl = `<button class="btn" id="s-dismiss">Dismiss</button> ${runUrl}`;
+  } else {
+    const canCancel = `<button class="btn danger" id="s-cancel" ${a.cancelling ? "disabled" : ""}>${a.cancelling ? "Cancelling…" : "Cancel run"}</button>`;
+    if (!run) { head = "Dispatching…"; body = "Waiting for GitHub to register the run."; }
+    else if (run.status === "queued" || run.status === "waiting" || run.status === "pending") { head = "Queued"; body = "Waiting for a GitHub runner."; }
+    else if (st === "running") {
+      head = "Running";
+      const s = a.session;
+      body = `<div class="kv">
+        <span class="k">IDE</span>${s.ide_url ? `<a href="${esc(s.ide_url)}" target="_blank" rel="noopener"><code>${esc(s.ide_url)}</code></a>` : "<span>waiting for tunnel…</span>"}<span></span>
+        <span class="k">IDE password</span><code>${esc(s.ide_password || "…")}</code>${s.ide_password ? `<button class="btn" id="s-copy">Copy</button>` : "<span></span>"}
+        <span class="k">Desktop</span>${s.desktop_url ? `<a href="${esc(s.desktop_url)}" target="_blank" rel="noopener"><code>${esc(s.desktop_url)}</code></a>` : "<span>waiting for tunnel…</span>"}<span></span>
+      </div>
+      <p class="note" style="margin-top:10px">To save and power off, run <code>touch /STOP</code> in a terminal inside the IDE. The runner snapshots and uploads everything by itself. Cancelling instead discards this session.</p>`;
+    }
+    else if (st === "snapshotting") { head = "Saving snapshot"; body = "Compressing, encrypting and uploading. Keep this page open or come back later; it continues on GitHub."; }
+    else { head = "Starting"; body = "The runner is restoring the disk and booting the machine. This can take several minutes."; }
+    ctrl = `${canCancel} ${runUrl}`;
+  }
+  el.innerHTML = `<div class="sess ${cls}"><h3>${title}: ${head}</h3>${a.err ? `<p class="err">${esc(a.err)}</p>` : ""}
+    ${body.startsWith("<") ? body : `<p>${body}</p>`}<div class="row">${ctrl}</div></div>`;
+  $("s-cancel") && ($("s-cancel").onclick = cancelRun);
+  $("s-dismiss") && ($("s-dismiss").onclick = dismissSession);
+  $("s-copy") && ($("s-copy").onclick = () => navigator.clipboard.writeText(a.session.ide_password).then(() => toast("Password copied")));
+}
+
+/* ---------------- dialogs ---------------- */
+$("btn-new").onclick = () => { $("nm-err").textContent = ""; $("nm-name").value = ""; $("nm-desc").value = ""; $("dlg-new").showModal(); $("nm-name").focus(); };
+$("nm-cancel").onclick = () => $("dlg-new").close();
+$("new-form").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const name = $("nm-name").value.trim(), size = "70G", err = $("nm-err");
+  if (S.machines.some(m => m.name.toLowerCase() === name.toLowerCase())) { err.textContent = "A machine with this name already exists."; return; }
+  const btn = $("nm-ok"); btn.disabled = true; err.textContent = "";
+  try {
+    const desc = $("nm-desc").value.trim();
+    const rec = { id: "m" + hex(rand(5)), name, size, desc, created: new Date().toISOString() };
+    await putFile(`machines/${rec.id}.enc`, JSON.stringify(await hybridEnc(rec, S.pubKey)), "machine added");
+    $("dlg-new").close();
+    S.pending[rec.id] = rec; S.machines.push(rec); S.sel = rec.id; renderList(); renderMachine();
+    try { await refreshData(); } catch (e) { console.error(e); toast("Saved, but refresh failed: " + e.message, 6000); }
+  } catch (e) { err.textContent = e.message; }
+  finally { btn.disabled = false; }
+});
+</script>
+</body>
+</html>
