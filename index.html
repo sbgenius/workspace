@@ -5,119 +5,260 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>persistance-machine</title>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
 :root{
   --bg:#e6e9ee; --panel:#f8f9fb; --panel2:#ffffff; --line:#cdd3dc; --ink:#151c26; --mute:#5b6675;
   --accent:#1f4fd8; --accent-ink:#ffffff; --ok:#1f8f4e; --warn:#b26a00; --bad:#c62d3a;
   --screen-off:#1b222d; --screen-on:#173a8a; --sel:#d9e3fb;
+  --card:#eef1f6; --glow:rgba(31,79,216,.12); --shadow:0 1px 2px rgba(20,30,50,.06),0 8px 28px rgba(20,30,50,.08);
   --font:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
-  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme:dark){
-  :root{--bg:#10141a; --panel:#171c24; --panel2:#1d232d; --line:#2b3441; --ink:#e6eaf0; --mute:#93a0b2;
-    --accent:#6b93ff; --accent-ink:#0b1020; --ok:#4cc27f; --warn:#e0a13a; --bad:#ff6b76;
-    --screen-off:#0a0d12; --screen-on:#2452c9; --sel:#243252}
+  :root{--bg:#0d1117; --panel:#161b22; --panel2:#1c2129; --line:#30363d; --ink:#e6edf3; --mute:#8b949e;
+    --accent:#58a6ff; --accent-ink:#0b1020; --ok:#3fb950; --warn:#d29922; --bad:#f85149;
+    --screen-off:#0a0d12; --screen-on:#1f4bbd; --sel:#1d2b45;
+    --card:#12161d; --glow:rgba(88,166,255,.14); --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 32px rgba(0,0,0,.35)}
 }
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--font)}
-button,input,select{font:inherit;color:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--font)}
+button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .hidden{display:none!important}
 h1,h2,h3{margin:0;font-weight:600}
 a{color:var(--accent)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(63,185,80,.5)}100%{box-shadow:0 0 0 9px rgba(63,185,80,0)}}
 
-/* ---------- auth ---------- */
-#auth{min-height:100%;display:grid;place-items:center;padding:24px}
-.auth-card{width:min(440px,100%);background:var(--panel2);border:1px solid var(--line);border-radius:6px}
-.auth-head{padding:22px 24px 6px}
-.auth-head h1{font-size:22px;letter-spacing:-.01em}
-.auth-head p{margin:6px 0 0;color:var(--mute)}
-.tabs{display:flex;border-bottom:1px solid var(--line);margin-top:14px}
-.tabs button{flex:1;padding:10px;background:none;border:0;border-bottom:2px solid transparent;cursor:pointer;color:var(--mute)}
-.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
-form.stack{padding:18px 24px 24px;display:grid;gap:14px}
-label{display:grid;gap:5px;font-weight:600;font-size:13px}
-label small{font-weight:400;color:var(--mute)}
-input[type=text],input[type=password],input[type=number],select{
-  width:100%;padding:8px 10px;background:var(--panel);border:1px solid var(--line);border-radius:4px}
-input:focus{border-color:var(--accent)}
-.btn{padding:8px 14px;border-radius:4px;border:1px solid var(--line);background:var(--panel);cursor:pointer}
+/* ---------- auth (terminal window) ---------- */
+#auth{min-height:100%;display:grid;place-items:center;padding:24px;
+  background:
+    radial-gradient(900px 420px at 15% -10%,var(--glow),transparent 60%),
+    radial-gradient(700px 380px at 100% 110%,var(--glow),transparent 60%),
+    var(--bg)}
+.auth-card{width:min(480px,100%);background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  box-shadow:var(--shadow);overflow:hidden;animation:fadeUp .4s ease;font-family:var(--mono)}
+.term-bar{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg);border-bottom:1px solid var(--line)}
+.term-dots{display:flex;gap:6px}
+.term-dots i{width:11px;height:11px;border-radius:50%;display:block}
+.term-dots i:nth-child(1){background:#ff5f56}.term-dots i:nth-child(2){background:#ffbd2e}.term-dots i:nth-child(3){background:#27c93f}
+.term-title{font-size:12px;color:var(--mute)}
+.auth-head{padding:26px 30px 4px}
+.auth-head h1{font-size:22px;font-weight:700;letter-spacing:-.02em;color:var(--accent);display:flex;align-items:center;gap:0}
+.auth-head h1 .pr{color:var(--ink);margin-right:10px}
+.auth-head h1 .cur{display:inline-block;width:10px;height:1.05em;background:var(--accent);margin-left:6px;transform:translateY(2px);animation:blink 1.05s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.auth-head p{margin:10px 0 0;color:var(--mute);font-size:12.5px;line-height:1.6}
+.tabs{display:flex;gap:6px;margin:18px 30px 0;padding:4px;background:var(--bg);border:1px solid var(--line);border-radius:8px}
+.tabs button{flex:1;padding:8px 10px;background:none;border:0;border-radius:6px;cursor:pointer;color:var(--mute);
+  font-family:var(--mono);font-size:12.5px;font-weight:600;transition:background .15s,color .15s}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-selected=true]{color:var(--ink);background:var(--panel2);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+form.stack{padding:22px 30px 30px;display:grid;gap:18px}
+label{display:grid;gap:7px;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}
+label small{font-weight:400;color:var(--mute);text-transform:none;letter-spacing:0;font-size:11.5px;line-height:1.55}
+label small b{color:var(--ink)}
+label small code{font-family:var(--mono);color:var(--accent)}
+input[type=text],input[type=password],input[type=number],select,textarea{
+  width:100%;padding:11px 13px;background:var(--bg);border:1px solid var(--line);border-radius:7px;
+  font-family:var(--mono);font-size:13px;color:var(--ink);text-transform:none;letter-spacing:0;font-weight:400;
+  transition:border-color .15s,box-shadow .15s}
+input::placeholder,textarea::placeholder{color:var(--mute);opacity:.6}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
+.btn{padding:9px 16px;border-radius:0;border:1px solid var(--line);background:var(--panel2);cursor:pointer;
+  transition:transform .12s,filter .15s,border-color .15s,background .15s;font-weight:500}
 .btn:hover:not(:disabled){border-color:var(--accent)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
-.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn.primary{background:var(--ok);border-color:rgba(240,246,252,.12);color:#fff;font-weight:700}
+.btn.primary:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px);border-color:rgba(240,246,252,.2)}
+.btn.danger{color:var(--bad);border-color:var(--bad);background:transparent}
+.btn.danger:hover:not(:disabled){background:rgba(248,81,73,.1)}
+.btn.solid-danger{background:var(--bad);border-color:var(--bad);color:#fff;font-weight:700}
 .btn:disabled{opacity:.5;cursor:not-allowed}
+.auth-card .btn.primary{border-radius:7px;width:100%;padding:12px;font-family:var(--mono);font-size:13.5px;margin-top:2px}
 .note{font-size:12.5px;color:var(--mute);margin:0}
 .note.warn{color:var(--warn)}
-.err{color:var(--bad);font-size:13px;margin:0;min-height:1em;white-space:pre-wrap}
-.steps{list-style:none;margin:0;padding:0;font-size:13px;display:grid;gap:3px}
-.steps li::before{content:"\2713  ";color:var(--ok)}
-.steps li.cur::before{content:"\2026  ";color:var(--mute)}
+.err{color:var(--bad);font-size:12.5px;margin:0;white-space:pre-wrap}
+.err:empty{display:none}
+.err:not(:empty){padding:10px 12px;border-left:3px solid var(--bad);background:rgba(248,81,73,.08);border-radius:0 6px 6px 0}
+.steps{list-style:none;margin:0;padding:0;font-size:12.5px;display:grid;gap:5px}
+.steps:empty{display:none}
+.steps li::before{content:"\2713  ";color:var(--ok);font-weight:700}
+.steps li.cur::before{content:"\25CF  ";color:var(--accent);animation:pulse 1s infinite}
+.steps li.cur{color:var(--ink)}
+
+/* larger type on the sign-in / sign-up card */
+.auth-card .auth-head p{font-size:14px;line-height:1.65}
+.auth-card label{font-size:12.5px;gap:9px}
+.auth-card label small{font-size:13px;line-height:1.6}
+.auth-card input[type=text],.auth-card input[type=password]{font-size:16px;padding:14px 15px;line-height:1.3}
+.auth-card input::placeholder{font-size:15px;opacity:.55}
+.auth-card .tabs button{font-size:14px;padding:10px 12px}
+.auth-card .btn.primary{font-size:15.5px;padding:14px}
+.auth-card .steps{font-size:14px}
+.auth-card .err{font-size:14px}
+.auth-card form.stack{gap:20px}
 
 /* ---------- app ---------- */
 #app{height:100%;display:grid;grid-template-rows:auto 1fr}
-.toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
-.toolbar .brand{font-weight:700;margin-right:10px;letter-spacing:-.01em}
+.toolbar{display:flex;align-items:center;gap:12px;padding:10px 18px;background:var(--panel);border-bottom:1px solid var(--line);
+  position:relative;z-index:5}
+.toolbar .brand{font-family:var(--mono);font-weight:800;letter-spacing:-.02em;color:var(--accent);display:flex;align-items:center;gap:8px;margin-right:6px}
+.toolbar .brand svg{width:20px;height:20px}
 .toolbar .sp{flex:1}
-.toolbar .who{color:var(--mute);font-size:13px}
-.split{display:grid;grid-template-columns:270px 1fr;min-height:0}
-#list{background:var(--panel);border-right:1px solid var(--line);overflow:auto}
-.m-item{display:grid;grid-template-columns:36px 1fr;gap:10px;align-items:center;padding:10px 12px;width:100%;
-  text-align:left;background:none;border:0;border-bottom:1px solid var(--line);cursor:pointer}
-.m-item:hover{background:var(--panel2)}
+.user-chip{display:flex;align-items:center;gap:12px;padding:5px 6px 5px 14px;background:var(--panel2);border:1px solid var(--line);border-radius:0;
+  box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.user-chip .who{font-family:var(--mono);font-size:13.5px;font-weight:700;color:var(--ink);padding-right:2px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-chip .out{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:0;border:0;background:rgba(248,81,73,.1);color:var(--bad);
+  font-weight:600;font-size:12.5px;cursor:pointer;transition:background .15s,color .15s}
+.user-chip .out:hover{background:var(--bad);color:#fff}
+.user-chip .out svg{width:14px;height:14px}
+.split{display:grid;grid-template-columns:290px 1fr;min-height:0}
+#side{display:flex;flex-direction:column;min-height:0;background:var(--card);border-right:1px solid var(--line)}
+#list{flex:1;min-height:0;overflow:auto;padding:0;display:block}
+.side-foot{flex:none;border-top:1px solid var(--line);padding:12px;background:var(--panel)}
+.side-foot .btn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 14px;font-size:14px}
+.m-item{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;align-items:center;padding:12px 14px;width:100%;
+  text-align:left;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;cursor:pointer;position:relative;
+  transition:background .15s}
+.m-item::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:transparent;transition:background .15s}
+.m-item:hover{background:var(--panel)}
 .m-item[aria-current=true]{background:var(--sel)}
-.m-item .n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.m-item .s{font-size:12px;color:var(--mute)}
-.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mute);margin-right:5px}
-.dot.on{background:var(--ok)}
-.dot.busy{background:var(--warn)}
-.empty{padding:28px 18px;color:var(--mute)}
-#detail{overflow:auto;padding:20px 24px 40px}
-.d-head{display:grid;grid-template-columns:150px 1fr;gap:22px;align-items:center}
-.d-head h2{font-size:24px;letter-spacing:-.01em}
-.meta{display:flex;flex-wrap:wrap;gap:4px 18px;color:var(--mute);font-size:13px;margin-top:6px}
-.meta code{font-family:var(--mono);font-size:12px}
-.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
-.snaps{margin-top:22px;border:1px solid var(--line);border-radius:4px;background:var(--panel2)}
-.snaps > button.tog{width:100%;text-align:left;padding:10px 14px;background:none;border:0;cursor:pointer;font-weight:600;display:flex;gap:8px}
-.snaps .chev{display:inline-block;transition:transform .15s}
+.m-item[aria-current=true]::before{background:var(--accent)}
+.m-item .n{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-item .s{font-size:12px;color:var(--mute);margin-top:1px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mute);margin-right:6px}
+.dot.on{background:var(--ok);animation:ring 1.6s ease-out infinite}
+.dot.busy{background:var(--warn);animation:pulse 1s infinite}
+.empty{padding:34px 18px;color:var(--mute);text-align:center;font-size:13px}
+.empty-side{padding:44px 18px 30px;text-align:center;color:var(--mute)}
+.empty-side .ghost{width:96px;margin:0 auto 14px;opacity:.55}
+.empty-side b{display:block;color:var(--ink);opacity:.75;font-size:14px;margin-bottom:4px}
+.empty-side span{font-size:12.5px}
+.empty-main{display:grid;place-items:center;min-height:calc(100vh - 170px);text-align:center;padding:20px}
+.empty-main .box{max-width:420px;display:grid;justify-items:center;gap:6px}
+.empty-main .ghost-lg{width:230px;opacity:.5;margin-bottom:10px;filter:grayscale(1)}
+.empty-main h2{font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--ink);opacity:.85}
+.empty-main p{margin:4px 0 0;color:var(--mute);font-size:14px;line-height:1.65}
+.empty-main .hint{margin-top:16px;display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border:1px dashed var(--line);
+  color:var(--mute);font-size:12.5px;font-family:var(--mono)}
+.empty-main .hint b{color:var(--accent)}
+.ghost .g-stroke,.ghost-lg .g-stroke{stroke:var(--mute)}
+.ghost .g-fill,.ghost-lg .g-fill{fill:var(--line)}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.empty-main .ghost-lg{animation:floaty 4.5s ease-in-out infinite}
+#detail{overflow:auto;padding:26px 30px 48px;background:
+  radial-gradient(700px 300px at 80% -10%,var(--glow),transparent 65%),var(--bg)}
+#detail.enter > #machine{animation:fadeUp .3s ease both}
+
+/* detail header */
+.d-head{display:grid;grid-template-columns:170px 1fr;gap:28px;align-items:center;
+  background:var(--card);border:1px solid var(--line);border-radius:0;padding:22px 24px;box-shadow:var(--shadow)}
+.d-head .mon{filter:drop-shadow(0 6px 14px rgba(0,0,0,.25))}
+.d-head h2{font-size:26px;letter-spacing:-.02em;font-weight:800}
+.status-pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;padding:3px 11px;border-radius:0;
+  border:1px solid var(--line);color:var(--mute);margin-left:10px;vertical-align:middle;font-family:var(--mono)}
+.status-pill.on{color:var(--ok);border-color:var(--ok);background:rgba(63,185,80,.1)}
+.status-pill.busy{color:var(--warn);border-color:var(--warn);background:rgba(210,153,34,.1)}
+.status-pill .dot{margin:0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:0;padding:10px 13px;min-width:0}
+.stat .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);font-weight:700}
+.stat .v{margin-top:3px;font-weight:700;font-size:13.5px;line-height:1.35;overflow-wrap:anywhere}
+.stat .v.mono{font-family:var(--mono);font-size:12.5px}
+.stat .v.dim{color:var(--mute);font-weight:500}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.actions .btn.primary{padding:10px 20px;font-size:14px}
+
+.snaps{margin-top:22px;border:1px solid var(--line);border-radius:0;background:var(--card);overflow:hidden;box-shadow:var(--shadow)}
+.snaps > button.tog{width:100%;text-align:left;padding:13px 18px;background:none;border:0;cursor:pointer;font-weight:700;display:flex;gap:10px;align-items:center;
+  transition:background .15s}
+.snaps > button.tog:hover{background:var(--bg)}
+.snaps .chev{display:inline-block;transition:transform .18s;color:var(--accent)}
 .snaps[data-open=true] .chev{transform:rotate(90deg)}
-.snap-row{display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:center;padding:9px 14px;border-top:1px solid var(--line)}
-.snap-row .t{font-weight:600}
-.snap-row .s{color:var(--mute);font-size:12.5px}
 .tree{position:relative;border-top:1px solid var(--line)}
 .tree svg{position:absolute;left:0;top:0;pointer-events:none}
-.trow{height:64px;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding-right:12px;border-bottom:1px solid var(--line)}
+.trow{height:64px;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding-right:14px;border-bottom:1px solid var(--line);transition:background .12s}
+.trow:hover{background:var(--bg)}
 .trow:last-child{border-bottom:0}
 .trow .t{font-weight:600}
-.trow .s{color:var(--mute);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trow .s{color:var(--mute);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono)}
 .desc{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .desc.none{color:var(--mute);font-style:italic}
-textarea{width:100%;min-height:78px;padding:8px 10px;background:var(--panel);border:1px solid var(--line);border-radius:4px;resize:vertical;font:inherit;color:inherit}
-.btn.sm{padding:4px 9px;font-size:12.5px}
-.badge{font-size:11.5px;padding:1px 7px;border-radius:9px;border:1px solid var(--ok);color:var(--ok);margin-left:6px}
-#session{margin:0 0 18px}
-.sess{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:4px;background:var(--panel2);padding:14px 16px}
+textarea{min-height:82px;resize:vertical}
+.btn.sm{padding:5px 11px;font-size:12.5px}
+.badge{font-size:11px;padding:1px 8px;border-radius:0;border:1px solid var(--ok);color:var(--ok);margin-left:8px;font-weight:600}
+
+/* session card */
+#session{margin:0 0 20px}
+.sess{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:0;background:var(--card);padding:16px 18px;box-shadow:var(--shadow)}
 .sess.done{border-left-color:var(--ok)} .sess.bad{border-left-color:var(--bad)}
-.sess h3{font-size:15px}
-.sess p{margin:6px 0 0}
-.kv{display:grid;grid-template-columns:auto 1fr auto;gap:6px 12px;align-items:center;margin-top:10px;font-size:13px}
+.sess h3{font-size:15px;display:flex;align-items:center;gap:10px}
+.sess p{margin:8px 0 0}
+.sess .spin{width:15px;height:15px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex:none}
+.kv{display:grid;grid-template-columns:auto 1fr auto;gap:8px 14px;align-items:center;margin-top:12px;font-size:13px}
 .kv code{font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .kv .k{color:var(--mute)}
-.sess .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
-dialog{border:1px solid var(--line);border-radius:6px;background:var(--panel2);color:var(--ink);padding:0;width:min(420px,92vw)}
-dialog::backdrop{background:rgba(10,14,20,.5)}
-dialog form{padding:18px 20px;display:grid;gap:14px}
-dialog h3{font-size:17px}
+.sess .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
+
+/* dialogs */
+dialog{border:1px solid var(--line);border-radius:0;background:var(--panel);color:var(--ink);padding:0;width:min(440px,92vw);
+  box-shadow:0 24px 70px rgba(0,0,0,.5);font-family:var(--font)}
+dialog[open]{animation:fadeUp .22s ease}
+dialog::backdrop{background:rgba(3,6,10,.62);backdrop-filter:blur(3px);animation:fadeIn .18s ease}
+dialog form{padding:22px 24px;display:grid;gap:16px}
+dialog h3{font-size:17px;font-weight:700}
+dialog .msg{color:var(--mute);font-size:13.5px;line-height:1.6;margin:0}
 .rowb{display:flex;gap:8px;justify-content:flex-end}
 .chk{display:flex;gap:8px;align-items:center;font-weight:400}
-#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);
-  padding:9px 16px;border-radius:4px;font-size:13px;max-width:90vw}
+.dlg-ico{width:42px;height:42px;border-radius:0;display:grid;place-items:center;background:rgba(248,81,73,.12);color:var(--bad)}
+.dlg-ico.warn{background:rgba(210,153,34,.14);color:var(--warn)}
+.dlg-ico svg{width:22px;height:22px}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);
+  padding:10px 18px;border-radius:0;font-size:13px;max-width:90vw;box-shadow:var(--shadow);animation:fadeUp .2s ease}
+
+/* countdown */
+.timer{display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:5px 12px;border-radius:0;background:var(--panel);
+  border:1px solid var(--line);font-family:var(--mono);font-size:12.5px;color:var(--mute)}
+.timer b{color:var(--ink);font-size:14px;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.timer.low b{color:var(--warn)} .timer.crit b{color:var(--bad)}
+.timer svg{width:14px;height:14px}
+.sess-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+/* monitor icon animation */
+.mon-ring{transform-origin:36px 24px;animation:spin .9s linear infinite}
+.mon-on{animation:pulse 2.4s ease-in-out infinite}
+
 @media (max-width:760px){
-  .split{grid-template-columns:1fr;grid-template-rows:auto 1fr}
-  #list{max-height:34vh;border-right:0;border-bottom:1px solid var(--line)}
-  .d-head{grid-template-columns:1fr}
+  html,body{overflow-x:hidden}
+  #app{grid-template-columns:minmax(0,1fr)}
+  .split{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 1fr}
+  #side{border-right:0;border-bottom:1px solid var(--line);max-height:44vh}
+  #detail{padding:16px 14px 40px;min-width:0}
+  .d-head{grid-template-columns:1fr;justify-items:start;padding:18px;gap:16px}
+  .d-head > div{min-width:0;width:100%}
+  .d-head .mon{width:120px}
+  .d-head h2{font-size:22px}
+  .stats{grid-template-columns:1fr 1fr}
+  .toolbar{padding:8px 10px;gap:8px;flex-wrap:nowrap}
+  .toolbar .sp{display:none}
+  .toolbar .brand{display:none}
+  .user-chip{margin-left:auto;min-width:0}
+  .user-chip .who{max-width:64px;font-size:12.5px}
+  .user-chip .out{padding:6px 9px}
+  .kv{grid-template-columns:auto minmax(0,1fr)}
+  .kv .btn{grid-column:1/-1;justify-self:start}
+  .snap-row,.trow{min-width:0}
 }
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* squared look for the logged-in screen + dialogs (spinners and status dots stay round on purpose) */
+#app :is(.btn,.stat,.snaps,.sess,.d-head,.user-chip,.user-chip .out,.status-pill,.badge,.timer,.kv,.trow){border-radius:0}
+dialog :is(input,textarea,select,.btn,.dlg-ico){border-radius:0}
+dialog,dialog .err{border-radius:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
@@ -125,8 +266,12 @@ dialog h3{font-size:17px}
 <!-- ================= AUTH ================= -->
 <div id="auth">
   <div class="auth-card">
+    <div class="term-bar">
+      <div class="term-dots"><i></i><i></i><i></i></div>
+      <div class="term-title" id="term-title">~/persistance-machine — locked</div>
+    </div>
     <div class="auth-head">
-      <h1>persistance-machine</h1>
+      <h1><span class="pr">$</span><span id="auth-cmd">unlock</span><span class="cur"></span></h1>
       <p>Cloud machines that keep every snapshot. Everything is encrypted in a public GitHub repo; your password never leaves this page.</p>
     </div>
     <div class="tabs" role="tablist">
@@ -136,10 +281,10 @@ dialog h3{font-size:17px}
 
     <form class="stack" id="login-form" autocomplete="on">
       <label>GitHub username
-        <input type="text" id="li-user" autocomplete="username" required>
+        <input type="text" id="li-user" autocomplete="username" required placeholder="octocat">
       </label>
       <label>Password
-        <input type="password" id="li-pw" autocomplete="current-password" required>
+        <input type="password" id="li-pw" autocomplete="current-password" required placeholder="vault password">
       </label>
       <p class="err" id="li-err" role="alert"></p>
       <button class="btn primary" id="li-btn" type="submit">Log in</button>
@@ -151,11 +296,11 @@ dialog h3{font-size:17px}
         <small>Classic token with the <b>repo</b> and <b>workflow</b> scopes. It is encrypted here, then stored in the new public repo <code>persistance-machine</code>.</small>
       </label>
       <label>Password
-        <input type="password" id="su-pw" autocomplete="new-password" minlength="12" required>
+        <input type="password" id="su-pw" autocomplete="new-password" minlength="12" required placeholder="long passphrase">
         <small>At least 12 characters. The encrypted vault is public, so anyone can try to guess this offline. Use a long passphrase. It cannot be recovered.</small>
       </label>
       <label>Confirm password
-        <input type="password" id="su-pw2" autocomplete="new-password" required>
+        <input type="password" id="su-pw2" autocomplete="new-password" required placeholder="confirm passphrase">
       </label>
       <ul class="steps" id="su-steps"></ul>
       <p class="err" id="su-err" role="alert"></p>
@@ -167,13 +312,21 @@ dialog h3{font-size:17px}
 <!-- ================= APP ================= -->
 <div id="app" class="hidden">
   <div class="toolbar">
-    <span class="brand">persistance-machine</span>
-    <button class="btn primary" id="btn-new">New machine</button>
+    <span class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>persistance-machine</span>
     <span class="sp"></span>
-    <span class="who" id="who"></span>
+    <div class="user-chip">
+      <span class="who" id="who"></span>
+      <button class="out" id="btn-logout" type="button" title="Log out">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </button>
+    </div>
   </div>
   <div class="split">
-    <nav id="list" aria-label="Machines"></nav>
+    <aside id="side">
+      <nav id="list" aria-label="Machines"></nav>
+      <div class="side-foot"><button class="btn primary" id="btn-new" type="button"><span aria-hidden="true">+</span> New machine</button></div>
+    </aside>
     <main id="detail">
       <div id="session"></div>
       <div id="machine"></div>
@@ -208,6 +361,10 @@ dialog h3{font-size:17px}
       <textarea id="sd-desc" maxlength="500" placeholder="What are you going to do in this session?"></textarea>
       <small>Stored encrypted. You can edit it later from the snapshot list.</small>
     </label>
+    <label>Screen resolution
+      <select id="sd-res"></select>
+      <small>Desktop size for this session. "Current screen" matches this browser window as it is right now.</small>
+    </label>
     <div class="rowb">
       <button class="btn" type="button" id="sd-cancel">Cancel</button>
       <button class="btn primary" type="submit" id="sd-ok">Start</button>
@@ -229,7 +386,48 @@ dialog h3{font-size:17px}
   </form>
 </dialog>
 
+<!-- remove machine -->
+<dialog id="dlg-del">
+  <form method="dialog" id="del-form">
+    <div class="dlg-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></div>
+    <h3 id="del-title">Remove machine?</h3>
+    <p class="msg" id="del-msg"></p>
+    <p class="err" id="del-err" role="alert"></p>
+    <div class="rowb">
+      <button class="btn" type="button" id="del-cancel">Keep it</button>
+      <button class="btn solid-danger" type="submit" id="del-ok">Remove machine</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- logout confirm -->
+<dialog id="dlg-logout">
+  <form method="dialog" id="logout-form">
+    <div class="dlg-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div>
+    <h3>Log out?</h3>
+    <p class="msg">You will be signed out and the page will reload. Any running session keeps going on GitHub; you can pick it up again after logging back in.</p>
+    <div class="rowb">
+      <button class="btn" type="button" id="lo-cancel">Stay</button>
+      <button class="btn solid-danger" type="submit" id="lo-ok">Log out</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- generic confirm (used for cancelling a run) -->
+<dialog id="dlg-confirm">
+  <form method="dialog" id="confirm-form">
+    <div class="dlg-ico warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+    <h3 id="cf-title">Are you sure?</h3>
+    <p class="msg" id="cf-msg"></p>
+    <div class="rowb">
+      <button class="btn" type="button" id="cf-no">Keep running</button>
+      <button class="btn solid-danger" type="submit" id="cf-yes">Cancel run</button>
+    </div>
+  </form>
+</dialog>
+
 <div id="toast" class="hidden" role="status"></div>
+
 
 <!-- The workflow that gets pushed into the repo. Kept verbatim in a text block. -->
 <script type="text/plain" id="wf">
@@ -303,6 +501,11 @@ on:
         type: string
         required: false
         default: "3"
+      resolution:
+        description: "Desktop resolution WIDTHxHEIGHT (set by the web app)"
+        type: string
+        required: false
+        default: "1920x1080"
 
 permissions:
   contents: write
@@ -323,6 +526,7 @@ env:
   BRANCH: ${{ github.event.repository.default_branch }}
   SESSION_ID: ${{ inputs.session_id }}
   MACHINE_ID: ${{ inputs.machine_id }}
+  RESOLUTION: ${{ inputs.resolution }}
   SNAPSHOT_KEY: ${{ secrets.SNAPSHOT_KEY }}
 
 jobs:
@@ -514,6 +718,11 @@ jobs:
 
           mkdir -p /root/.config/code-server /root/.vnc /var/log /workspace
 
+          # Desktop size chosen in the web app (written by the workflow before start).
+          GEOMETRY=1920x1080
+          [ -f /root/.config/desktop-resolution ] && GEOMETRY=$(tr -d '[:space:]' < /root/.config/desktop-resolution)
+          [[ "$GEOMETRY" =~ ^[0-9]{3,4}x[0-9]{3,4}$ ]] || GEOMETRY=1920x1080
+
           CFG=/root/.config/code-server/config.yaml
           if [ ! -f "$CFG" ]; then
             PW=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 20)
@@ -555,7 +764,7 @@ jobs:
               rm -f /tmp/.X1-lock /tmp/.X11-unix/X1
               sleep 1
               Xvnc :1 \
-                -geometry 1920x1080 -depth 24 \
+                -geometry "$GEOMETRY" -depth 24 \
                 -rfbport "$VNC_PORT" \
                 -SecurityTypes None \
                 -AlwaysShared -AcceptSetDesktopSize \
@@ -659,6 +868,13 @@ jobs:
           auth: none
           cert: false
           EOF
+
+          # Desktop resolution for this session, read by the entrypoint from /root.
+          RES="${RESOLUTION:-1920x1080}"
+          if ! [[ "$RES" =~ ^[0-9]{3,4}x[0-9]{3,4}$ ]]; then
+            echo "::warning::invalid resolution input, using 1920x1080"; RES=1920x1080
+          fi
+          echo "$RES" | sudo tee "$MNT/home/.config/desktop-resolution" >/dev/null
 
           EXISTS=$(sudo docker ps -aq -f name="^${CONTAINER}$" || true)
 
@@ -941,7 +1157,7 @@ async function hybridDec(env, privKey) {
 
 /* ---------------- state ---------------- */
 const S = { user: null, pat: null, branch: "main", priv: null, pubKey: null, pubRaw: null, snapKey: null,
-            machines: [], snaps: [], sel: null, open: {}, active: null, bad: [], pending: {}, notes: {}, notesLocal: {}, starting: false };
+            machines: [], snaps: [], sel: null, open: {}, active: null, bad: [], pending: {}, notes: {}, notesLocal: {}, starting: false, deleted: new Set() };
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
@@ -957,8 +1173,13 @@ async function gh(path, { method = "GET", body, auth = true } = {}) {
   const h = { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
   if (auth && S.pat) h.Authorization = "Bearer " + S.pat;
   if (body) h["Content-Type"] = "application/json";
-  const r = await fetch(path.startsWith("http") ? path : API + path,
-    { method, headers: h, body: body ? JSON.stringify(body) : undefined, cache: "no-store" });
+  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 30000);
+  let r;
+  try {
+    r = await fetch(path.startsWith("http") ? path : API + path,
+      { method, headers: h, body: body ? JSON.stringify(body) : undefined, cache: "no-store", signal: ctl.signal });
+  } catch (e) { throw new Error(e.name === "AbortError" ? "GitHub did not respond (timed out)." : "Network error: " + e.message); }
+  finally { clearTimeout(to); }
   if (r.status === 204) return null;
   let j = null; try { j = await r.json(); } catch {}
   if (!r.ok) { const e = new Error((j && j.message) || ("HTTP " + r.status)); e.status = r.status; e.data = j; throw e; }
@@ -966,9 +1187,26 @@ async function gh(path, { method = "GET", body, auth = true } = {}) {
 }
 const repoPath = p => `/repos/${S.user}/${REPO_NAME}${p}`;
 const fileText = f => td.decode(unb64(f.content));
+// Login fetch: plain GitHub API read of the public vault file (no token needed).
+async function fetchVault() {
+  const f = await getFile("vault.json", false);
+  return f ? { text: fileText(f) } : null;
+}
 async function getFile(path, auth = true) {
   try { return await gh(repoPath("/contents/" + path), { auth }); }
   catch (e) { if (e.status === 404) return null; throw e; }
+}
+async function deleteFile(path, msg) {
+  let last;
+  for (let i = 0; i < 4; i++) {
+    try {
+      const ex = await getFile(path);
+      if (!ex) return null;                                  // already gone: nothing to do
+      return await gh(repoPath("/contents/" + path), { method: "DELETE",
+        body: { message: msg, sha: ex.sha, branch: S.branch } });
+    } catch (e) { last = e; if (![404, 409, 422].includes(e.status)) break; await sleep(1500); }
+  }
+  throw last;
 }
 async function putFile(path, content, msg) {
   const bytes = typeof content === "string" ? te.encode(content) : content;
@@ -1012,6 +1250,8 @@ function showAuthTab(which) {
   const login = which === "login";
   $("tab-login").setAttribute("aria-selected", login); $("tab-signup").setAttribute("aria-selected", !login);
   $("login-form").classList.toggle("hidden", !login); $("signup-form").classList.toggle("hidden", login);
+  $("auth-cmd").textContent = login ? "unlock" : "init";
+  $("term-title").textContent = login ? "~/persistance-machine \u2014 locked" : "~/persistance-machine \u2014 register";
 }
 $("tab-login").onclick = () => showAuthTab("login");
 $("tab-signup").onclick = () => showAuthTab("signup");
@@ -1027,9 +1267,10 @@ $("login-form").addEventListener("submit", async ev => {
   const btn = $("li-btn"), err = $("li-err"); err.textContent = ""; btn.disabled = true; btn.textContent = "Unlocking…";
   try {
     S.user = $("li-user").value.trim();
-    const f = await getFile("vault.json", false);
+    const f = await fetchVault();
     if (!f) throw new Error(`No vault found at github.com/${S.user}/${REPO_NAME}. Sign up first.`);
-    await unlock(await openVault(JSON.parse(fileText(f)), $("li-pw").value));
+    await unlock(await openVault(JSON.parse(f.text), $("li-pw").value));
+    // Now authenticated (5000/h limit), so the branch lookup no longer touches the anonymous limit.
     const repo = await gh(repoPath(""));
     S.branch = repo.default_branch;
     ls.set("pm_user", S.user);
@@ -1098,6 +1339,23 @@ function logout() {
   Object.assign(S, { pat: null, priv: null, pubKey: null, snapKey: null, machines: [], snaps: [], sel: null, active: null });
   $("app").classList.add("hidden"); $("auth").classList.remove("hidden");
 }
+$("btn-logout").onclick = () => $("dlg-logout").showModal();
+$("lo-cancel").onclick = () => $("dlg-logout").close();
+$("logout-form").addEventListener("submit", ev => { ev.preventDefault(); logout(); location.reload(); });
+
+/* in-page replacement for window.confirm() */
+function askConfirm(title, msg, yes = "Confirm", no = "Cancel") {
+  return new Promise(res => {
+    $("cf-title").textContent = title; $("cf-msg").textContent = msg;
+    $("cf-yes").textContent = yes; $("cf-no").textContent = no;
+    const d = $("dlg-confirm"); let out = false;
+    const done = v => { if (out) return; out = true; d.close(); res(v); };
+    $("cf-no").onclick = () => done(false);
+    $("confirm-form").onsubmit = ev => { ev.preventDefault(); done(true); };
+    d.onclose = () => done(false);
+    d.showModal();
+  });
+}
 
 /* ---------------- app data ---------------- */
 const recCache = new Map();
@@ -1122,7 +1380,9 @@ async function refreshData() {
   S.bad = [];
   const [ms, ss, ns] = await Promise.all([fetchDir("machines"), fetchDir("snapshots"), fetchDir("notes")]);
   const ok = e => e.type === "file" && e.name.endsWith(".enc");
-  const found = (await Promise.all(ms.filter(ok).map(loadRecord))).filter(Boolean);
+  const gone = ms.filter(ok).map(e => e.name.replace(/\.enc$/, ""));
+  for (const id of [...S.deleted]) if (!gone.includes(id)) S.deleted.delete(id);   // listing caught up: stop hiding
+  const found = (await Promise.all(ms.filter(ok).filter(e => !S.deleted.has(e.name.replace(/\.enc$/, ""))).map(loadRecord))).filter(Boolean);
   for (const id of Object.keys(S.pending)) {
     if (found.some(m => m.id === id)) delete S.pending[id]; else found.push(S.pending[id]);
   }
@@ -1154,14 +1414,17 @@ async function enterApp() {
 }
 
 /* ---------------- rendering ---------------- */
-function monitor(state) {
-  const on = state === "on", busy = state === "busy";
+function monitor(state, opts = {}) {
+  const on = state === "on", busy = state === "busy", ide = !!opts.ide;
   const fill = on ? "var(--screen-on)" : "var(--screen-off)";
-  return `<svg viewBox="0 0 72 60" width="100%" aria-hidden="true">
+  // Once the IDE link exists the screen shows the same blue "windows" picture as the sidebar.
+  const showIde = on || ide;
+  return `<svg class="mon" viewBox="0 0 72 60" width="100%" aria-hidden="true">
     <rect x="4" y="4" width="64" height="40" rx="3" fill="none" stroke="var(--mute)" stroke-width="2.5"/>
-    <rect x="8" y="8" width="56" height="32" rx="1" fill="${fill}"/>
-    ${on ? `<path d="M13 15h26M13 21h34M13 27h20" stroke="#9db8ff" stroke-width="2" stroke-linecap="round"/>` : ""}
-    ${busy ? `<circle cx="36" cy="24" r="6" fill="none" stroke="var(--warn)" stroke-width="2" stroke-dasharray="20 18"/>` : ""}
+    <rect x="8" y="8" width="56" height="32" rx="1" fill="${showIde ? "var(--screen-on)" : fill}"/>
+    ${showIde ? `<g class="mon-on"><path d="M13 15h26M13 21h34M13 27h20" stroke="#9db8ff" stroke-width="2" stroke-linecap="round"/><rect x="13" y="32" width="5" height="2.5" rx="1" fill="#9db8ff"/></g>` : ""}
+    ${busy && !showIde ? `<circle cx="36" cy="24" r="9" fill="none" stroke="var(--warn)" stroke-opacity=".25" stroke-width="2.5"/>
+      <circle class="mon-ring" cx="36" cy="24" r="9" fill="none" stroke="var(--warn)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="16 41"/>` : ""}
     <path d="M28 52h16M36 44v8" stroke="var(--mute)" stroke-width="2.5" stroke-linecap="round"/></svg>`;
 }
 function machState(m) {
@@ -1171,17 +1434,26 @@ function machState(m) {
   }
   return "off";
 }
+function ghostSvg(cls, plus = true) {
+  return `<svg class="${cls}" viewBox="0 0 120 100" fill="none" aria-hidden="true">
+    <rect class="g-stroke" x="12" y="8" width="96" height="62" rx="4" stroke-width="3" stroke-dasharray="7 5"/>
+    <rect class="g-fill" x="20" y="16" width="80" height="46" opacity=".55"/>
+    ${plus ? `<path class="g-stroke" d="M60 30v18M51 39h18" stroke-width="3.5" stroke-linecap="round"/>` : ""}
+    <path class="g-stroke" d="M42 88h36M60 70v18" stroke-width="3" stroke-linecap="round" stroke-dasharray="7 5"/></svg>`;
+}
+function setHTML(el, html) { if (el.__h === html) return false; el.__h = html; el.innerHTML = html; return true; }
 function renderList() {
   const el = $("list");
-  if (!S.machines.length) { el.innerHTML = `<div class="empty">No machines yet.<br>Use <b>New machine</b> to create one.</div>`; return; }
-  el.innerHTML = S.machines.map(m => {
+  if (!S.machines.length) { setHTML(el, `<div class="empty-side">${ghostSvg("ghost")}<b>No machines yet</b><span>Create one below</span></div>`); return; }
+  const html = S.machines.map(m => {
     const st = machState(m), n = snapsOf(m.id).length;
-    const sub = st === "on" ? "Running" : st === "busy" ? "Starting / saving" : "Powered off";
+    const sub = st === "on" ? "Running" : st === "busy" ? "Busy" : "Powered off";
     return `<button class="m-item" data-id="${esc(m.id)}" aria-current="${m.id === S.sel}">
       <div>${monitor(st)}</div>
       <div><div class="n">${esc(m.name)}</div>
       <div class="s"><span class="dot ${st === "on" ? "on" : st === "busy" ? "busy" : ""}"></span>${sub} · ${n} snapshot${n === 1 ? "" : "s"}</div></div></button>`;
   }).join("");
+  if (!setHTML(el, html)) return;
   el.querySelectorAll(".m-item").forEach(b => b.onclick = () => { S.sel = b.dataset.id; renderList(); renderMachine(); });
 }
 // Lane assignment: a snapshot continues its parent's lane if it is the parent's
@@ -1226,24 +1498,38 @@ function graphHtml(list, locked) {
   }).join("");
   return `<div class="tree"><svg width="${W}" height="${H}" aria-hidden="true">${paths}${nodes}</svg>${rows}</div>`;
 }
+let lastShownMachine = null;
 function renderMachine() {
   const el = $("machine"), m = S.machines.find(x => x.id === S.sel);
+  { const d = $("detail"), first = lastShownMachine !== S.sel; lastShownMachine = S.sel;
+    d.classList.remove("enter"); if (first) { void d.offsetWidth; d.classList.add("enter"); } }
   const bad = S.bad.length ? `<p class="err">${S.bad.length} record(s) could not be read:\n${esc(S.bad.join("\n"))}</p>` : "";
-  if (!m) { el.innerHTML = bad + `<p class="note">Select or create a machine.</p>`; return; }
+  if (!m) {
+    el.innerHTML = bad + (S.machines.length
+      ? `<div class="empty-main"><div class="box">${ghostSvg("ghost-lg", false)}<h2>No machine selected</h2><p>Pick a machine from the list to see its snapshots and start a session.</p></div></div>`
+      : `<div class="empty-main"><div class="box">${ghostSvg("ghost-lg")}<h2>Your first machine</h2>
+          <p>A cloud computer that keeps every snapshot. Nothing here yet, so create one to get started.</p>
+          <div class="hint"><span>Press</span> <b>+ New machine</b> <span>in the sidebar</span></div></div></div>`);
+    return;
+  }
   const list = snapsOf(m.id), latest = list[0], st = machState(m), locked = sessionLive();
   const open = !!S.open[m.id];
   el.innerHTML = bad + `
     <div class="d-head">
-      <div>${monitor(st)}</div>
+      <div>${monitor(st, { ide: !!(locked && activeMachineId() === m.id && S.active.session?.ide_url) })}</div>
       <div>
-        <h2>${esc(m.name)}</h2>
-        <div class="meta"><span>Disk ${esc(m.size)}</span><span>Created ${esc(fmtDate(new Date(m.created)))}</span>
-          <span>${latest ? "Last saved " + esc(fmtDate(tsDate(latest.created_utc))) : "Never started"}</span>
-          <span>id <code>${esc(m.id)}</code></span></div>
+        <h2>${esc(m.name)}<span class="status-pill ${st}"><span class="dot ${st === "on" ? "on" : st === "busy" ? "busy" : ""}"></span>${st === "on" ? "Running" : st === "busy" ? "Starting / saving" : "Powered off"}</span></h2>
+        <div class="stats">
+          <div class="stat"><div class="l">Disk</div><div class="v">${esc(m.size)}</div></div>
+          <div class="stat"><div class="l">Created</div><div class="v">${esc(fmtDate(new Date(m.created)))}</div></div>
+          <div class="stat"><div class="l">Last saved</div><div class="v ${latest ? "" : "dim"}">${latest ? esc(fmtDate(tsDate(latest.created_utc))) : "Never started"}</div></div>
+          <div class="stat"><div class="l">Machine id</div><div class="v mono">${esc(m.id)}</div></div>
+        </div>
         <div class="actions">
           ${latest
             ? `<button class="btn primary" id="a-resume" ${locked ? "disabled" : ""}>Resume latest</button>`
             : `<button class="btn primary" id="a-start" ${locked ? "disabled" : ""}>Start (fresh disk)</button>`}
+          <button class="btn danger" id="a-del" ${locked && activeMachineId() === m.id ? "disabled" : ""} title="${locked && activeMachineId() === m.id ? "Stop the running session first" : "Remove this machine from your list"}">Remove machine</button>
         </div>
         ${locked ? `<p class="note" style="margin-top:8px">Another session is active. Only one runs at a time.</p>` : ""}
       </div>
@@ -1255,6 +1541,7 @@ function renderMachine() {
   $("a-tog").onclick = () => { S.open[m.id] = !S.open[m.id]; renderMachine(); };
   $("a-resume") && ($("a-resume").onclick = () => openStart(m, latest.tag));
   $("a-start") && ($("a-start").onclick = () => openStart(m, null));
+  $("a-del").onclick = () => openDelete(m);
   el.querySelectorAll("[data-tag]").forEach(b => b.onclick = () => openStart(m, b.dataset.tag));
   el.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => editNote(list.find(s => s.tag === b.dataset.edit)));
 }
@@ -1271,7 +1558,9 @@ async function adoptRunningSession() {
     const live = r.workflow_runs.find(x => x.status !== "completed" && (x.display_title || "").startsWith("ws "));
     if (!live) { ls.del("pm_active"); return; }
     const sid = live.display_title.slice(3), saved = ls.get("pm_active", null);
-    S.active = { sid, machineId: saved && saved.sid === sid ? saved.machineId : null, runId: live.id, run: live, session: null, sha: null, t0: Date.parse(live.created_at) };
+    const mine = saved && saved.sid === sid;
+    S.active = { sid, machineId: mine ? saved.machineId : null, runId: live.id, run: live, session: null, sha: null,
+                 t0: mine && saved.t0 ? saved.t0 : Date.parse(live.created_at), mins: mine && saved.mins ? saved.mins : adv().minutes };
     startPolling(); renderList(); renderMachine();
   } catch {}
 }
@@ -1287,13 +1576,23 @@ function openStart(m, tag) {
       (branching ? "It already has a follow-up, so saving will start a new branch." : "Saving will add the next snapshot after it.");
   } else $("sd-base").textContent = "Fresh disk.";
   $("sd-desc").value = tag ? "" : (m.desc || "");
+  fillResolutions();
   $("dlg-start").showModal(); $("sd-desc").focus();
+}
+const RES_PRESETS = ["1280x720", "1366x768", "1600x900", "1920x1080", "2560x1440", "3840x2160"];
+function fillResolutions() {
+  // "Current screen" is measured now, from this browser window, rounded down to even numbers.
+  const even = (n, lo, hi) => Math.max(lo, Math.min(hi, Math.floor(n / 2) * 2));
+  const cur = even(window.innerWidth, 640, 7680) + "x" + even(window.innerHeight, 480, 4320);
+  $("sd-res").innerHTML = RES_PRESETS.map(r => `<option value="${r}">${r}</option>`).join("") +
+    `<option value="${cur}">Current screen (${cur})</option>`;
+  $("sd-res").value = "1920x1080";
 }
 $("sd-cancel").onclick = () => $("dlg-start").close();
 $("start-form").addEventListener("submit", ev => {
   ev.preventDefault();
   const { m, tag } = S.pendingStart; $("dlg-start").close();
-  startSession(m, tag, $("sd-desc").value.trim());
+  startSession(m, tag, $("sd-desc").value.trim(), $("sd-res").value);
 });
 function editNote(s) {
   S.pendingNote = s;
@@ -1318,7 +1617,7 @@ async function liveRunOnGitHub() {
   const r = await gh(repoPath(`/actions/workflows/${WF_FILE}/runs?per_page=20`));
   return r.workflow_runs.find(x => x.status !== "completed" && (x.display_title || "").startsWith("ws ")) || null;
 }
-async function startSession(m, tag, note) {
+async function startSession(m, tag, note, resolution = "1920x1080") {
   if (S.starting || sessionLive()) return toast("A session is already running. Only one at a time.");
   S.starting = true;
   try {
@@ -1332,9 +1631,9 @@ async function startSession(m, tag, note) {
     await gh(repoPath(`/actions/workflows/${WF_FILE}/dispatches`), { method: "POST", body: { ref: S.branch, inputs: {
       machine_id: m.id, session_id: sid, mode: tag ? "resume" : "new", snapshot_tag: tag || "",
       force_rebuild: String(!!a.force), session_minutes: String(a.minutes), image_size: m.size || "70G",
-      chunk_mb: String(a.chunk), compress_level: String(a.level) } } });
-    S.active = { sid, machineId: m.id, runId: null, run: null, session: null, sha: null, t0: Date.now() };
-    ls.set("pm_active", { sid, machineId: m.id });
+      chunk_mb: String(a.chunk), compress_level: String(a.level), resolution: String(resolution) } } });
+    S.active = { sid, machineId: m.id, runId: null, run: null, session: null, sha: null, t0: Date.now(), mins: a.minutes };
+    ls.set("pm_active", { sid, machineId: m.id, t0: S.active.t0, mins: a.minutes });
     startPolling(); renderList(); renderMachine(); renderSession();
   } catch (e) { toast("Could not start: " + e.message, 7000); }
   finally { S.starting = false; }
@@ -1357,6 +1656,8 @@ async function poll() {
     if (!a.err || a.runId) delete a.err;
   } catch (e) { a.err = e.message; }
   renderSession(); renderList();
+  { const k = [machState(S.machines.find(x => x.id === activeMachineId()) || {}), !!a.session?.ide_url, !!a.session?.ide_password].join();
+    if (a.__k !== k) { a.__k = k; renderMachine(); } }
   if (a.run && a.run.status === "completed" && !a.finished) {
     a.finished = true; clearInterval(pollT); pollT = null; ls.del("pm_active");
     try { await refreshData(); } catch {}
@@ -1366,8 +1667,10 @@ async function poll() {
 async function cancelRun() {
   const a = S.active; if (!a) return;
   const saving = a.session?.status === "snapshotting";
-  if (!confirm(saving ? "The snapshot is still being saved. Cancelling now discards this session and saves NOTHING. Cancel anyway?"
-                      : "Cancel the run? Everything since the last snapshot is discarded and nothing is uploaded.")) return;
+  if (!await askConfirm("Cancel this run?",
+        saving ? "The snapshot is still being saved. Cancelling now discards this session and saves NOTHING. Cancel anyway?"
+               : "Everything since the last snapshot is discarded and nothing is uploaded.",
+        "Cancel run", "Keep running")) return;
   try {
     if (!a.runId) { const r = await findRun(a.sid); if (r) a.runId = r.id; }
     if (!a.runId) throw new Error("Run not found yet, try again in a few seconds.");
@@ -1376,19 +1679,28 @@ async function cancelRun() {
   } catch (e) { toast("Cancel failed: " + e.message, 6000); }
 }
 function dismissSession() { S.active = null; renderSession(); renderList(); renderMachine(); }
+const fmtHMS = ms => { const t = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60;
+  return [h, m, s].map(n => String(n).padStart(2, "0")).join(":"); };
+function tickTimer() {
+  const a = S.active, t = $("s-time"); if (!a || !t) return;
+  const left = a.t0 + (a.mins || 240) * 60000 - Date.now();
+  t.textContent = fmtHMS(left);
+  const box = $("s-timer"); box.classList.toggle("low", left < 15 * 60000 && left >= 5 * 60000); box.classList.toggle("crit", left < 5 * 60000);
+}
+setInterval(tickTimer, 1000);
 function renderSession() {
   const el = $("session"), a = S.active;
   if (!a) { el.innerHTML = ""; return; }
   const m = S.machines.find(x => x.id === (a.machineId || a.session?.machine_id));
   const title = m ? esc(m.name) : "Session";
-  const runUrl = a.run?.html_url ? `<a href="${esc(a.run.html_url)}" target="_blank" rel="noopener">View run log</a>` : "";
+  const runUrl = "";
   const st = a.session?.status, run = a.run;
   let cls = "", head = "", body = "", ctrl = "";
   if (run && run.status === "completed") {
     const c = run.conclusion;
     if (c === "success") { cls = "done"; head = "Snapshot saved"; body = "The machine is powered off. It now appears under Snapshots as the latest one."; }
     else if (c === "cancelled") { cls = "bad"; head = "Cancelled"; body = "Nothing was saved. Your previous snapshots are untouched."; }
-    else { cls = "bad"; head = "Run failed"; body = "Nothing was saved. Check the run log for the reason."; }
+    else { cls = "bad"; head = "Run failed"; body = "Nothing was saved. Please try again."; }
     ctrl = `<button class="btn" id="s-dismiss">Dismiss</button> ${runUrl}`;
   } else {
     const canCancel = `<button class="btn danger" id="s-cancel" ${a.cancelling ? "disabled" : ""}>${a.cancelling ? "Cancelling…" : "Cancel run"}</button>`;
@@ -1408,12 +1720,49 @@ function renderSession() {
     else { head = "Starting"; body = "The runner is restoring the disk and booting the machine. This can take several minutes."; }
     ctrl = `${canCancel} ${runUrl}`;
   }
-  el.innerHTML = `<div class="sess ${cls}"><h3>${title}: ${head}</h3>${a.err ? `<p class="err">${esc(a.err)}</p>` : ""}
+  const spin = (!run || run.status !== "completed") && st !== "running" ? `<span class="spin"></span>` : "";
+  const timer = (!run || run.status !== "completed") ? `<div class="timer" id="s-timer" title="Time left in this session before it auto-snapshots">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+      <span>Time left</span><b id="s-time">--:--:--</b></div>` : "";
+  const htmlOut = `<div class="sess ${cls}"><h3>${spin}${title}: ${head}</h3>${timer}${a.err ? `<p class="err">${esc(a.err)}</p>` : ""}
     ${body.startsWith("<") ? body : `<p>${body}</p>`}<div class="row">${ctrl}</div></div>`;
+  if (!setHTML(el, htmlOut)) { tickTimer(); return; }
+  tickTimer();
   $("s-cancel") && ($("s-cancel").onclick = cancelRun);
   $("s-dismiss") && ($("s-dismiss").onclick = dismissSession);
   $("s-copy") && ($("s-copy").onclick = () => navigator.clipboard.writeText(a.session.ide_password).then(() => toast("Password copied")));
 }
+
+/* ---------------- remove machine ---------------- */
+function openDelete(m) {
+  if (sessionLive() && activeMachineId() === m.id) return toast("Stop or cancel the running session first.");
+  const n = snapsOf(m.id).length;
+  S.pendingDel = m;
+  $("del-title").textContent = `Remove "${m.name}"?`;
+  $("del-msg").textContent = "It will disappear from this list. Nothing is deleted from GitHub: " +
+    (n ? `its ${n} snapshot${n === 1 ? "" : "s"} and the release files stay in your repo, ` : "any releases stay in your repo, ") +
+    "so it can still be recovered by hand, but this app will not show it again.";
+  $("del-err").textContent = ""; $("del-ok").disabled = false; $("del-ok").textContent = "Remove machine";
+  $("dlg-del").showModal();
+}
+$("del-cancel").onclick = () => $("dlg-del").close();
+$("del-form").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const m = S.pendingDel, btn = $("del-ok"), err = $("del-err"); if (!m) return;
+  if (sessionLive() && activeMachineId() === m.id) { err.textContent = "A session is running on this machine."; return; }
+  btn.disabled = true; btn.textContent = "Removing…"; err.textContent = "";
+  try {
+    await deleteFile(`machines/${m.id}.enc`, "machine removed");
+    S.deleted.add(m.id); delete S.pending[m.id];
+    S.machines = S.machines.filter(x => x.id !== m.id);
+    if (S.sel === m.id) S.sel = S.machines[0]?.id ?? null;
+    delete S.open[m.id];
+    $("dlg-del").close(); S.pendingDel = null;
+    renderList(); renderMachine();
+    toast(`"${m.name}" removed`);
+    try { await refreshData(); } catch (e) { console.error(e); }
+  } catch (e) { err.textContent = "Could not remove: " + e.message; btn.disabled = false; btn.textContent = "Remove machine"; }
+});
 
 /* ---------------- dialogs ---------------- */
 $("btn-new").onclick = () => { $("nm-err").textContent = ""; $("nm-name").value = ""; $("nm-desc").value = ""; $("dlg-new").showModal(); $("nm-name").focus(); };
