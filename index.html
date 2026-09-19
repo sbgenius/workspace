@@ -648,6 +648,18 @@ jobs:
       - name: Start or recreate container
         run: |
           set -euo pipefail
+
+          # Passwordless code-server. /root is bind-mounted from the persisted
+          # disk and the entrypoint only writes a config when none exists, so
+          # write the config here, on the host side, before every start. This
+          # also switches machines whose old config still has a password.
+          sudo mkdir -p "$MNT/home/.config/code-server"
+          sudo tee "$MNT/home/.config/code-server/config.yaml" >/dev/null <<'EOF'
+          bind-addr: 0.0.0.0:8080
+          auth: none
+          cert: false
+          EOF
+
           EXISTS=$(sudo docker ps -aq -f name="^${CONTAINER}$" || true)
 
           if [ -n "$EXISTS" ] && [ "${{ inputs.force_rebuild }}" != "true" ]; then
@@ -1387,7 +1399,7 @@ function renderSession() {
       const s = a.session;
       body = `<div class="kv">
         <span class="k">IDE</span>${s.ide_url ? `<a href="${esc(s.ide_url)}" target="_blank" rel="noopener"><code>${esc(s.ide_url)}</code></a>` : "<span>waiting for tunnel…</span>"}<span></span>
-        <span class="k">IDE password</span><code>${esc(s.ide_password || "…")}</code>${s.ide_password ? `<button class="btn" id="s-copy">Copy</button>` : "<span></span>"}
+        ${s.ide_password ? `<span class="k">IDE password</span><code>${esc(s.ide_password)}</code><button class="btn" id="s-copy">Copy</button>` : ""}
         <span class="k">Desktop</span>${s.desktop_url ? `<a href="${esc(s.desktop_url)}" target="_blank" rel="noopener"><code>${esc(s.desktop_url)}</code></a>` : "<span>waiting for tunnel…</span>"}<span></span>
       </div>
       <p class="note" style="margin-top:10px">To save and power off, run <code>touch /STOP</code> in a terminal inside the IDE. The runner snapshots and uploads everything by itself. Cancelling instead discards this session.</p>`;
