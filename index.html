@@ -1157,7 +1157,7 @@ async function hybridDec(env, privKey) {
 
 /* ---------------- state ---------------- */
 const S = { user: null, pat: null, branch: "main", priv: null, pubKey: null, pubRaw: null, snapKey: null,
-            machines: [], snaps: [], sel: null, open: {}, active: null, bad: [], pending: {}, notes: {}, notesLocal: {}, starting: false, deleted: new Set() };
+            machines: [], snaps: [], sel: null, open: {}, active: null, bad: [], pending: {}, notes: {}, notesLocal: {}, starting: false, deleted: new Set(), zip: null };
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
@@ -1187,10 +1187,67 @@ async function gh(path, { method = "GET", body, auth = true } = {}) {
 }
 const repoPath = p => `/repos/${S.user}/${REPO_NAME}${p}`;
 const fileText = f => td.decode(unb64(f.content));
-// Login fetch: plain GitHub API read of the public vault file (no token needed).
+
+// ---- Repo download -------------------------------------------------------------------
+// ONE request to the Cloudflare worker (it fetches the public repo zip from codeload.github.com)
+// replaces the per-file GitHub API calls. It does not count against the API rate limit.
+// >>> Set this to the URL of your deployed worker (see worker.js) <<<
+const ZIP_PROXY = "https://summer-cloud-2145.shreyasbkg-1.workers.dev/";
+
+// Minimal zip reader: uses the central directory, inflates lazily with the browser's DecompressionStream.
+async function unzip(buf) {
+  const u8 = new Uint8Array(buf), dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  let e = -1;
+  for (let i = u8.length - 22, lo = Math.max(0, u8.length - 22 - 65535); i >= lo; i--)
+    if (dv.getUint32(i, true) === 0x06054b50) { e = i; break; }
+  if (e < 0) throw new Error("The downloaded file is not a valid zip.");
+  const count = dv.getUint16(e + 10, true);
+  let p = dv.getUint32(e + 16, true);
+  if (count === 0xFFFF || p === 0xFFFFFFFF) throw new Error("Zip64 archives are not supported.");
+  const files = new Map();
+  for (let i = 0; i < count; i++) {
+    if (dv.getUint32(p, true) !== 0x02014b50) throw new Error("Corrupt zip directory.");
+    const method = dv.getUint16(p + 10, true), crc = dv.getUint32(p + 16, true),
+          csize = dv.getUint32(p + 20, true), usize = dv.getUint32(p + 24, true),
+          nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true),
+          off = dv.getUint32(p + 42, true), name = td.decode(u8.subarray(p + 46, p + 46 + nl));
+    p += 46 + nl + xl + cl;
+    if (name.endsWith("/")) continue;                        // folder entry
+    const path = name.slice(name.indexOf("/") + 1);          // drop the "<repo>-<ref>/" root folder
+    if (!path) continue;
+    const bytes = async () => {
+      if (dv.getUint32(off, true) !== 0x04034b50) throw new Error("Corrupt zip entry: " + path);
+      const s = off + 30 + dv.getUint16(off + 26, true) + dv.getUint16(off + 28, true);
+      const raw = u8.subarray(s, s + csize);
+      if (method === 0) return raw;
+      if (method === 8)
+        return new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer());
+      throw new Error("Unsupported zip compression method " + method);
+    };
+    // key = path + crc32 + size: identifies the exact file content, used to cache decrypted records.
+    files.set(path, { path, key: path + ":" + crc + ":" + usize, bytes, text: async () => td.decode(await bytes()) });
+  }
+  return files;
+}
+async function loadRepoZip(user) {
+  if (!ZIP_PROXY || /YOUR-WORKER/.test(ZIP_PROXY))
+    throw new Error("ZIP_PROXY is not set. Deploy worker.js and put its URL in the ZIP_PROXY constant at the top of the script.");
+  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 45000);
+  let r;
+  try { r = await fetch(ZIP_PROXY.replace(/\/+$/, "") + "/" + encodeURIComponent(user) + ".zip?t=" + Date.now(), { signal: ctl.signal }); }
+  catch (e) { throw new Error(e.name === "AbortError" ? "Downloading the repo timed out." : "Could not reach the zip proxy: " + e.message); }
+  finally { clearTimeout(to); }
+  if (r.status === 404) return new Map();                    // repo does not exist (yet)
+  if (!r.ok) throw new Error("Downloading the repo failed (HTTP " + r.status + ").");
+  return unzip(await r.arrayBuffer());
+}
+// Login: the vault comes out of the same zip that then feeds the first refreshData() (kept in S.zip),
+// so logging in costs a single download and zero GitHub API calls for reading.
 async function fetchVault() {
-  const f = await getFile("vault.json", false);
-  return f ? { text: fileText(f) } : null;
+  const files = await loadRepoZip(S.user);
+  S.zip = files;
+  const f = files.get("vault.json");
+  return f ? { text: await f.text() } : null;
 }
 async function getFile(path, auth = true) {
   try { return await gh(repoPath("/contents/" + path), { auth }); }
@@ -1359,41 +1416,61 @@ function askConfirm(title, msg, yes = "Confirm", no = "Cancel") {
 
 /* ---------------- app data ---------------- */
 const recCache = new Map();
+// `entry` comes straight out of the downloaded zip, so no network is involved here.
+// Decrypted records are cached by path + crc32, so later refreshes only decrypt files that changed.
 async function loadRecord(entry) {
-  if (recCache.has(entry.sha)) return recCache.get(entry.sha);
+  if (recCache.has(entry.key)) return recCache.get(entry.key);
   try {
-    const b = await gh(repoPath("/git/blobs/" + entry.sha));
-    const obj = await hybridDec(JSON.parse(td.decode(unb64(b.content))), S.priv);
-    recCache.set(entry.sha, obj); return obj;
+    const obj = await hybridDec(JSON.parse(await entry.text()), S.priv);
+    recCache.set(entry.key, obj); return obj;
   } catch (e) { console.error("record", entry.name, e); S.bad.push(entry.name + ": " + e.message); return null; }
 }
-async function fetchDir(dir) {
-  try { return await gh(repoPath("/contents/" + dir)); }
-  catch (e) { if (e.status === 404) return []; throw e; }
+// The "<dir>/*.enc" files (not nested) of the downloaded repo copy.
+function zipDir(files, dir) {
+  const pre = dir + "/", out = [];
+  for (const f of files.values())
+    if (f.path.startsWith(pre) && f.path.endsWith(".enc") && !f.path.slice(pre.length).includes("/"))
+      out.push({ ...f, name: f.path.slice(pre.length) });
+  return out;
 }
 const tsDate = t => new Date(String(t).replace(/^(\d{4})(\d\d)(\d\d)T(\d\d)(\d\d)(\d\d)Z$/, "$1-$2-$3T$4:$5:$6Z"));
 const fmtDate = d => d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 const fmtBytes = n => { const u = ["B", "KB", "MB", "GB", "TB"]; let i = 0; n = Number(n) || 0;
   while (n >= 1024 && i < 4) { n /= 1024; i++; } return n.toFixed(i > 1 ? 1 : 0) + " " + u[i]; };
 
-async function refreshData() {
+// reuse=true: use the zip already downloaded during login instead of downloading again.
+async function refreshData({ reuse = false } = {}) {
   S.bad = [];
-  const [ms, ss, ns] = await Promise.all([fetchDir("machines"), fetchDir("snapshots"), fetchDir("notes")]);
-  const ok = e => e.type === "file" && e.name.endsWith(".enc");
-  const gone = ms.filter(ok).map(e => e.name.replace(/\.enc$/, ""));
-  for (const id of [...S.deleted]) if (!gone.includes(id)) S.deleted.delete(id);   // listing caught up: stop hiding
-  const found = (await Promise.all(ms.filter(ok).filter(e => !S.deleted.has(e.name.replace(/\.enc$/, ""))).map(loadRecord))).filter(Boolean);
+  let files;
+  if (reuse && S.zip) { files = S.zip; S.zip = null; }
+  else files = await loadRepoZip(S.user);                    // one worker request, no GitHub API calls
+  const ms = zipDir(files, "machines"), ss = zipDir(files, "snapshots"), ns = zipDir(files, "notes");
+  const idOf = e => e.name.replace(/\.enc$/, "");
+  const gone = ms.map(idOf);
+  for (const id of [...S.deleted]) if (!gone.includes(id)) S.deleted.delete(id);   // zip caught up: stop hiding
+  const found = (await Promise.all(ms.filter(e => !S.deleted.has(idOf(e))).map(loadRecord))).filter(Boolean);
   for (const id of Object.keys(S.pending)) {
     if (found.some(m => m.id === id)) delete S.pending[id]; else found.push(S.pending[id]);
   }
   S.machines = found.sort((a, b) => a.name.localeCompare(b.name));
   S.notes = {};
-  for (const n of (await Promise.all(ns.filter(ok).map(loadRecord))).filter(Boolean)) S.notes[n.session_id] = n.text;
+  for (const n of (await Promise.all(ns.map(loadRecord))).filter(Boolean)) S.notes[n.session_id] = n.text;
   Object.assign(S.notes, S.notesLocal);
-  S.snaps = (await Promise.all(ss.filter(ok).map(loadRecord))).filter(Boolean)
+  S.snaps = (await Promise.all(ss.map(loadRecord))).filter(Boolean)
     .sort((a, b) => tsDate(b.created_utc) - tsDate(a.created_utc));
   if (!S.machines.find(m => m.id === S.sel)) S.sel = S.machines[0]?.id ?? null;
   renderList(); renderMachine();
+}
+// After a successful run the new snapshot record was committed moments ago; if the zip does not
+// contain it yet, try again for up to ~30 s.
+async function refreshAfterRun(a) {
+  const expectSnap = a.run && a.run.conclusion === "success";
+  for (let i = 0; i < 6; i++) {
+    try { await refreshData(); } catch (e) { console.error(e); }
+    if (!expectSnap || S.snaps.some(s => s.session_id === a.sid)) break;
+    await sleep(5000);
+  }
+  renderMachine();
 }
 const snapsOf = id => S.snaps.filter(s => s.machine_id === id);
 const activeMachineId = () => S.active && (S.active.machineId || S.active.session?.machine_id) || null;
@@ -1403,7 +1480,7 @@ async function enterApp() {
   $("auth").classList.add("hidden"); $("app").classList.remove("hidden");
   $("who").textContent = S.user;
   $("machine").innerHTML = `<p class="note">Loading…</p>`;
-  try { await refreshData(); }
+  try { await refreshData({ reuse: true }); }
   catch (e) {
     console.error(e);
     $("machine").innerHTML = `<p class="err">Could not load machines: ${esc(e.message)}</p><button class="btn" id="a-retry">Retry</button>`;
@@ -1660,8 +1737,7 @@ async function poll() {
     if (a.__k !== k) { a.__k = k; renderMachine(); } }
   if (a.run && a.run.status === "completed" && !a.finished) {
     a.finished = true; clearInterval(pollT); pollT = null; ls.del("pm_active");
-    try { await refreshData(); } catch {}
-    renderMachine();
+    await refreshAfterRun(a);
   }
 }
 async function cancelRun() {
