@@ -9,17 +9,24 @@
 :root{
   --bg:#e6e9ee; --panel:#f8f9fb; --panel2:#ffffff; --line:#cdd3dc; --ink:#151c26; --mute:#5b6675;
   --accent:#1f4fd8; --accent-ink:#ffffff; --ok:#1f8f4e; --warn:#b26a00; --bad:#c62d3a;
-  --screen-off:#1b222d; --screen-on:#173a8a; --sel:#d9e3fb;
+  --screen-off:#1b222d; --screen-on:#173a8a; --sel:#dde1e8;
+  --go:#178a4a; --go-hi:#1fa25a; --go-lo:#127a3f; --go-edge:#0f6b37; --go-ink:#ffffff;
   --card:#eef1f6; --glow:rgba(31,79,216,.12); --shadow:0 1px 2px rgba(20,30,50,.06),0 8px 28px rgba(20,30,50,.08);
   --font:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme:dark){
-  :root{--bg:#0d1117; --panel:#161b22; --panel2:#1c2129; --line:#30363d; --ink:#e6edf3; --mute:#8b949e;
+  :root:not([data-theme="light"]){--bg:#0d1117; --panel:#161b22; --panel2:#1c2129; --line:#30363d; --ink:#e6edf3; --mute:#8b949e;
     --accent:#58a6ff; --accent-ink:#0b1020; --ok:#3fb950; --warn:#d29922; --bad:#f85149;
-    --screen-off:#0a0d12; --screen-on:#1f4bbd; --sel:#1d2b45;
+    --screen-off:#0a0d12; --screen-on:#1f4bbd; --sel:#242a33;
+    --go:#2a9d57; --go-hi:#36b168; --go-lo:#238a4b; --go-edge:#1d7a42; --go-ink:#ffffff;
     --card:#12161d; --glow:rgba(88,166,255,.14); --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 32px rgba(0,0,0,.35)}
 }
+:root[data-theme="dark"]{--bg:#0d1117; --panel:#161b22; --panel2:#1c2129; --line:#30363d; --ink:#e6edf3; --mute:#8b949e;
+    --accent:#58a6ff; --accent-ink:#0b1020; --ok:#3fb950; --warn:#d29922; --bad:#f85149;
+    --screen-off:#0a0d12; --screen-on:#1f4bbd; --sel:#242a33;
+    --go:#2a9d57; --go-hi:#36b168; --go-lo:#238a4b; --go-edge:#1d7a42; --go-ink:#ffffff;
+    --card:#12161d; --glow:rgba(88,166,255,.14); --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 32px rgba(0,0,0,.35)}
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--font)}
@@ -68,7 +75,7 @@ input[type=text],input[type=password],input[type=number],select,textarea{
   font-family:var(--mono);font-size:13px;color:var(--ink);text-transform:none;letter-spacing:0;font-weight:400;
   transition:border-color .15s,box-shadow .15s}
 input::placeholder,textarea::placeholder{color:var(--mute);opacity:.6}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:none}
 .btn{padding:9px 16px;border-radius:0;border:1px solid var(--line);background:var(--panel2);cursor:pointer;
   transition:transform .12s,filter .15s,border-color .15s,background .15s;font-weight:500}
 .btn:hover:not(:disabled){border-color:var(--accent)}
@@ -120,8 +127,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .split{display:grid;grid-template-columns:290px 1fr;min-height:0}
 #side{display:flex;flex-direction:column;min-height:0;background:var(--card);border-right:1px solid var(--line)}
 #list{flex:1;min-height:0;overflow:auto;padding:0;display:block}
-.side-foot{flex:none;border-top:1px solid var(--line);padding:12px;background:var(--panel)}
-.side-foot .btn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 14px;font-size:14px}
 .m-item{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;align-items:center;padding:12px 14px;width:100%;
   text-align:left;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;cursor:pointer;position:relative;
   transition:background .15s}
@@ -151,8 +156,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .ghost .g-fill,.ghost-lg .g-fill{fill:var(--line)}
 @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 .empty-main .ghost-lg{animation:floaty 4.5s ease-in-out infinite}
-#detail{overflow:auto;padding:26px 30px 48px;background:
-  radial-gradient(700px 300px at 80% -10%,var(--glow),transparent 65%),var(--bg)}
+#detail{overflow:auto;padding:26px 30px 48px;background:var(--bg)}
 #detail.enter > #machine{animation:fadeUp .3s ease both}
 
 /* detail header */
@@ -165,21 +169,24 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .status-pill.on{color:var(--ok);border-color:var(--ok);background:rgba(63,185,80,.1)}
 .status-pill.busy{color:var(--warn);border-color:var(--warn);background:rgba(210,153,34,.1)}
 .status-pill .dot{margin:0}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px}
-.stat{background:var(--panel);border:1px solid var(--line);border-radius:0;padding:10px 13px;min-width:0}
-.stat .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);font-weight:700}
-.stat .v{margin-top:3px;font-weight:700;font-size:13.5px;line-height:1.35;overflow-wrap:anywhere}
-.stat .v.mono{font-family:var(--mono);font-size:12.5px}
-.stat .v.dim{color:var(--mute);font-weight:500}
+.meta{display:grid;grid-template-columns:auto 1fr;gap:4px 18px;margin:14px 0 0;font-size:13px;line-height:1.45}
+.meta dt{color:var(--mute);font-weight:500}
+.meta dd{margin:0;font-weight:600;min-width:0;overflow-wrap:anywhere}
+.meta dd.mono{font-family:var(--mono);font-size:12.5px;font-weight:500}
+.meta dd.dim{color:var(--mute);font-weight:500}
 .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
-.actions .btn.primary{padding:10px 20px;font-size:14px}
+.actions .btn{height:32px;padding:0 16px;font-size:13px;line-height:1;display:inline-flex;align-items:center;
+  box-shadow:none;text-shadow:none}
+.actions .btn.primary{color:var(--go-ink);background:var(--go);border:1px solid var(--go-edge);font-weight:650}
+.actions .btn.primary:hover:not(:disabled){background:var(--go-hi);border-color:var(--go-edge);filter:none;transform:none}
+.actions .btn.primary:active:not(:disabled){transform:none}
+.actions .btn.danger{color:#fff;background:#d92d3a;border:1px solid #b81f2b;font-weight:650}
+.actions .btn.danger:hover:not(:disabled){background:#e23744;border-color:#b81f2b;filter:none}
+.actions .btn.danger:active:not(:disabled){transform:none}
+.actions .btn:disabled{opacity:.45;box-shadow:none}
 
 .snaps{margin-top:22px;border:1px solid var(--line);border-radius:0;background:var(--card);overflow:hidden;box-shadow:var(--shadow)}
-.snaps > button.tog{width:100%;text-align:left;padding:13px 18px;background:none;border:0;cursor:pointer;font-weight:700;display:flex;gap:10px;align-items:center;
-  transition:background .15s}
-.snaps > button.tog:hover{background:var(--bg)}
-.snaps .chev{display:inline-block;transition:transform .18s;color:var(--accent)}
-.snaps[data-open=true] .chev{transform:rotate(90deg)}
+.snaps > .snaps-title{width:100%;text-align:left;padding:13px 18px;font-weight:700;display:flex;gap:10px;align-items:center;cursor:default}
 .tree{position:relative;border-top:1px solid var(--line)}
 .tree svg{position:absolute;left:0;top:0;pointer-events:none}
 .trow{height:64px;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding-right:14px;border-bottom:1px solid var(--line);transition:background .12s}
@@ -243,7 +250,6 @@ dialog .msg{color:var(--mute);font-size:13.5px;line-height:1.6;margin:0}
   .d-head > div{min-width:0;width:100%}
   .d-head .mon{width:120px}
   .d-head h2{font-size:22px}
-  .stats{grid-template-columns:1fr 1fr}
   .toolbar{padding:8px 10px;gap:8px;flex-wrap:nowrap}
   .toolbar .sp{display:none}
   .toolbar .brand{display:none}
@@ -254,8 +260,30 @@ dialog .msg{color:var(--mute);font-size:13.5px;line-height:1.6;margin:0}
   .kv .btn{grid-column:1/-1;justify-self:start}
   .snap-row,.trow{min-width:0}
 }
+
+/* toolbar: new machine button + theme toggle */
+.side-foot{flex:none;border-top:1px solid var(--line);padding:12px;background:var(--panel)}
+.btn-new{display:flex;align-items:center;justify-content:center;width:100%;height:36px;padding:0 16px;
+  font-size:13.5px;font-weight:650;letter-spacing:.01em;line-height:1;white-space:nowrap;cursor:pointer;
+  color:var(--go-ink);background:var(--go);border:1px solid var(--go-edge);border-radius:0;
+  box-shadow:none;text-shadow:none;transition:background .15s}
+.btn-new:hover{background:var(--go-hi);border-color:var(--go-edge)}
+.theme-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;flex:none;
+  background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:0;cursor:pointer;
+  transition:border-color .15s,background .15s}
+.theme-btn:hover{border-color:var(--accent)}
+.theme-btn svg{width:17px;height:17px}
+.theme-btn .i-sun{display:none}
+.theme-btn[data-shown="dark"] .i-sun{display:block}
+.theme-btn[data-shown="dark"] .i-moon{display:none}
+.toolbar-right{display:flex;align-items:center;gap:10px;min-width:0}
+@media (max-width:760px){
+  .toolbar-right{margin-left:auto}
+  .toolbar-right .user-chip{margin-left:0}
+}
+
 /* squared look for the logged-in screen + dialogs (spinners and status dots stay round on purpose) */
-#app :is(.btn,.stat,.snaps,.sess,.d-head,.user-chip,.user-chip .out,.status-pill,.badge,.timer,.kv,.trow){border-radius:0}
+#app :is(.btn,.snaps,.sess,.d-head,.user-chip,.user-chip .out,.status-pill,.badge,.timer,.kv,.trow){border-radius:0}
 dialog :is(input,textarea,select,.btn,.dlg-ico){border-radius:0}
 dialog,dialog .err{border-radius:0}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -312,20 +340,25 @@ dialog,dialog .err{border-radius:0}
 <!-- ================= APP ================= -->
 <div id="app" class="hidden">
   <div class="toolbar">
-    <span class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>persistance-machine</span>
+    <button class="theme-btn" id="btn-theme" type="button" title="Toggle theme" aria-label="Toggle theme">
+      <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
+      <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+    </button>
     <span class="sp"></span>
-    <div class="user-chip">
-      <span class="who" id="who"></span>
-      <button class="out" id="btn-logout" type="button" title="Log out">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        Logout
-      </button>
+    <div class="toolbar-right">
+      <div class="user-chip">
+        <span class="who" id="who"></span>
+        <button class="out" id="btn-logout" type="button" title="Log out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Logout
+        </button>
+      </div>
     </div>
   </div>
   <div class="split">
     <aside id="side">
       <nav id="list" aria-label="Machines"></nav>
-      <div class="side-foot"><button class="btn primary" id="btn-new" type="button"><span aria-hidden="true">+</span> New machine</button></div>
+      <div class="side-foot"><button class="btn-new" id="btn-new" type="button">New machine</button></div>
     </aside>
     <main id="detail">
       <div id="session"></div>
@@ -342,7 +375,7 @@ dialog,dialog .err{border-radius:0}
       <input type="text" id="nm-name" maxlength="60" required placeholder="e.g. Rust sandbox">
     </label>
     <label>Description <small>(optional, saved with the first snapshot)</small>
-      <textarea id="nm-desc" maxlength="500" placeholder="What is this machine for?"></textarea>
+      <input type="text" id="nm-desc" maxlength="500" placeholder="What is this machine for?">
     </label>
     <p class="err" id="nm-err"></p>
     <div class="rowb">
@@ -358,7 +391,7 @@ dialog,dialog .err{border-radius:0}
     <h3 id="sd-title">Start</h3>
     <p class="note" id="sd-base"></p>
     <label>Description for the snapshot this session saves
-      <textarea id="sd-desc" maxlength="500" placeholder="What are you going to do in this session?"></textarea>
+      <input type="text" id="sd-desc" maxlength="500" placeholder="What are you going to do in this session?">
       <small>Stored encrypted. You can edit it later from the snapshot list.</small>
     </label>
     <label>Screen resolution
@@ -377,7 +410,7 @@ dialog,dialog .err{border-radius:0}
   <form method="dialog" id="editnote-form">
     <h3>Edit description</h3>
     <label>Description for this snapshot
-      <textarea id="en-desc" maxlength="500"></textarea>
+      <input type="text" id="en-desc" maxlength="500">
     </label>
     <div class="rowb">
       <button class="btn" type="button" id="en-cancel">Cancel</button>
@@ -1312,7 +1345,6 @@ function showAuthTab(which) {
 }
 $("tab-login").onclick = () => showAuthTab("login");
 $("tab-signup").onclick = () => showAuthTab("signup");
-$("li-user").value = ls.get("pm_user", "");
 
 async function unlock(secrets) {
   S.pat = secrets.pat; S.snapKey = secrets.snapKey; S.pubRaw = unb64(secrets.pub);
@@ -1330,7 +1362,6 @@ $("login-form").addEventListener("submit", async ev => {
     // Now authenticated (5000/h limit), so the branch lookup no longer touches the anonymous limit.
     const repo = await gh(repoPath(""));
     S.branch = repo.default_branch;
-    ls.set("pm_user", S.user);
     $("li-pw").value = "";
     await enterApp();
   } catch (e) { err.textContent = e.message; S.pat = null; }
@@ -1384,7 +1415,6 @@ $("signup-form").addEventListener("submit", async ev => {
     await putFile("vault.json", JSON.stringify(vault, null, 2), "Add encrypted vault");
 
     await unlock({ pat, priv: b64(keys.priv), pub: b64(keys.pub), snapKey });
-    ls.set("pm_user", S.user);
     $("su-pat").value = $("su-pw").value = $("su-pw2").value = "";
     await enterApp();
   } catch (e) { err.textContent = e.message; S.pat = null; }
@@ -1458,7 +1488,7 @@ async function refreshData({ reuse = false } = {}) {
   Object.assign(S.notes, S.notesLocal);
   S.snaps = (await Promise.all(ss.map(loadRecord))).filter(Boolean)
     .sort((a, b) => tsDate(b.created_utc) - tsDate(a.created_utc));
-  if (!S.machines.find(m => m.id === S.sel)) S.sel = S.machines[0]?.id ?? null;
+  if (!S.machines.find(m => m.id === S.sel)) S.sel = null;
   renderList(); renderMachine();
 }
 // After a successful run the new snapshot record was committed moments ago; if the zip does not
@@ -1586,22 +1616,20 @@ function renderMachine() {
       ? `<div class="empty-main"><div class="box">${ghostSvg("ghost-lg", false)}<h2>No machine selected</h2><p>Pick a machine from the list to see its snapshots and start a session.</p></div></div>`
       : `<div class="empty-main"><div class="box">${ghostSvg("ghost-lg")}<h2>Your first machine</h2>
           <p>A cloud computer that keeps every snapshot. Nothing here yet, so create one to get started.</p>
-          <div class="hint"><span>Press</span> <b>+ New machine</b> <span>in the sidebar</span></div></div></div>`);
+          <div class="hint"><span>Press</span> <b>New machine</b> <span>in the sidebar</span></div></div></div>`);
     return;
   }
   const list = snapsOf(m.id), latest = list[0], st = machState(m), locked = sessionLive();
-  const open = !!S.open[m.id];
   el.innerHTML = bad + `
     <div class="d-head">
       <div>${monitor(st, { ide: !!(locked && activeMachineId() === m.id && S.active.session?.ide_url) })}</div>
       <div>
         <h2>${esc(m.name)}<span class="status-pill ${st}"><span class="dot ${st === "on" ? "on" : st === "busy" ? "busy" : ""}"></span>${st === "on" ? "Running" : st === "busy" ? "Starting / saving" : "Powered off"}</span></h2>
-        <div class="stats">
-          <div class="stat"><div class="l">Disk</div><div class="v">${esc(m.size)}</div></div>
-          <div class="stat"><div class="l">Created</div><div class="v">${esc(fmtDate(new Date(m.created)))}</div></div>
-          <div class="stat"><div class="l">Last saved</div><div class="v ${latest ? "" : "dim"}">${latest ? esc(fmtDate(tsDate(latest.created_utc))) : "Never started"}</div></div>
-          <div class="stat"><div class="l">Machine id</div><div class="v mono">${esc(m.id)}</div></div>
-        </div>
+        <dl class="meta">
+          <dt>Created</dt><dd>${esc(fmtDate(new Date(m.created)))}</dd>
+          <dt>Last saved</dt><dd class="${latest ? "" : "dim"}">${latest ? esc(fmtDate(tsDate(latest.created_utc))) : "Never started"}</dd>
+          <dt>Machine id</dt><dd class="mono">${esc(m.id)}</dd>
+        </dl>
         <div class="actions">
           ${latest
             ? `<button class="btn primary" id="a-resume" ${locked ? "disabled" : ""}>Resume latest</button>`
@@ -1611,11 +1639,10 @@ function renderMachine() {
         ${locked ? `<p class="note" style="margin-top:8px">Another session is active. Only one runs at a time.</p>` : ""}
       </div>
     </div>
-    <div class="snaps" data-open="${open}">
-      <button class="tog" id="a-tog" aria-expanded="${open}"><span class="chev">&#9656;</span> Snapshots (${list.length})</button>
-      ${open ? graphHtml(list, locked) : ""}
+    <div class="snaps" data-open="true">
+      <div class="snaps-title">Snapshots (${list.length})</div>
+      ${graphHtml(list, locked)}
     </div>`;
-  $("a-tog").onclick = () => { S.open[m.id] = !S.open[m.id]; renderMachine(); };
   $("a-resume") && ($("a-resume").onclick = () => openStart(m, latest.tag));
   $("a-start") && ($("a-start").onclick = () => openStart(m, null));
   $("a-del").onclick = () => openDelete(m);
@@ -1652,7 +1679,7 @@ function openStart(m, tag) {
     $("sd-base").textContent = `From the snapshot of ${fmtDate(tsDate(base.created_utc))}${note ? " (" + note + ")" : ""}. ` +
       (branching ? "It already has a follow-up, so saving will start a new branch." : "Saving will add the next snapshot after it.");
   } else $("sd-base").textContent = "Fresh disk.";
-  $("sd-desc").value = tag ? "" : (m.desc || "");
+  $("sd-desc").value = tag ? "" : (m.desc || "").replace(/\s*[\r\n]+\s*/g, " ");
   fillResolutions();
   $("dlg-start").showModal(); $("sd-desc").focus();
 }
@@ -1673,7 +1700,7 @@ $("start-form").addEventListener("submit", ev => {
 });
 function editNote(s) {
   S.pendingNote = s;
-  $("en-desc").value = S.notes[s.session_id] || "";
+  $("en-desc").value = (S.notes[s.session_id] || "").replace(/\s*[\r\n]+\s*/g, " ");
   $("dlg-editnote").showModal(); $("en-desc").focus();
 }
 $("en-cancel").onclick = () => $("dlg-editnote").close();
@@ -1831,7 +1858,7 @@ $("del-form").addEventListener("submit", async ev => {
     await deleteFile(`machines/${m.id}.enc`, "machine removed");
     S.deleted.add(m.id); delete S.pending[m.id];
     S.machines = S.machines.filter(x => x.id !== m.id);
-    if (S.sel === m.id) S.sel = S.machines[0]?.id ?? null;
+    if (S.sel === m.id) S.sel = null;
     delete S.open[m.id];
     $("dlg-del").close(); S.pendingDel = null;
     renderList(); renderMachine();
@@ -1858,6 +1885,19 @@ $("new-form").addEventListener("submit", async ev => {
   } catch (e) { err.textContent = e.message; }
   finally { btn.disabled = false; }
 });
+
+/* ---------------- theme toggle (UI only) ---------------- */
+// Always starts on the system default: no attribute is set on load and nothing is persisted.
+// The toggle flips to the opposite of whatever is currently showing.
+(function () {
+  const root = document.documentElement, btn = document.getElementById("btn-theme");
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  const showing = () => root.dataset.theme || (mq.matches ? "dark" : "light");
+  const sync = () => btn.setAttribute("data-shown", showing());
+  btn.addEventListener("click", () => { root.dataset.theme = showing() === "dark" ? "light" : "dark"; sync(); });
+  mq.addEventListener && mq.addEventListener("change", sync);
+  sync();
+})();
 </script>
 </body>
 </html>
