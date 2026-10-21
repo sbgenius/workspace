@@ -375,6 +375,21 @@ dialog input[type=text],dialog input[type=password],dialog select{font-size:15px
 #app .m-item.tf{display:flex;align-items:stretch;gap:0;padding:0 10px 0 6px!important;min-height:30px}
 #app .m-item.tf .tn{align-self:center;min-width:0;padding:5px 0 5px 4px}
 #app .m-item.tf .n{font-size:14px;font-weight:600}
+#app .mach-head.rh{height:0;min-height:0;padding:0;overflow:visible}
+@media(max-width:760px){#app .mach-head.rh{height:56px;padding:0 14px}}
+#app .empty .lk{background:none;border:0;padding:0;font:inherit;color:var(--go-hi);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+#app .empty .lk:hover{color:var(--go)}
+/* in-place new repository / album row in the sidebar */
+#app #list .sn-row{cursor:default}
+#app #list .sn-row.sn-ghost{opacity:.5;pointer-events:none}
+#app #list .sn-row .ie{display:block;box-sizing:content-box;max-width:100%;min-width:2ch;margin:0;padding:2px 6px;background:var(--panel2);border:1px solid var(--accent);border-radius:6px!important;outline:none;box-shadow:none;font:600 14px/1.25 var(--font);color:var(--ink);text-transform:none;letter-spacing:0}
+#app .m-item.rp{display:flex;align-items:center;gap:10px;padding:8px 10px}
+#app .m-item.rp .ico{color:var(--mute)}
+#app .m-item.rp .n{min-width:0}
+#app .m-item.rp[aria-current=true] .ico{color:var(--accent)}
+/* New button and 3-dot button share one height (Drive + Photos) */
+#app #head .kebab-wrap>.btn{height:34px;min-height:0;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;padding:0 18px;line-height:1}
+#app #head #kb{width:34px;padding:0}
 #app .m-item.tf .g{flex:none;position:relative;width:16px}
 #app .m-item.tf .g.v::before,#app .m-item.tf .g.c::before{content:"";position:absolute;left:7px;top:0;bottom:0;border-left:1px solid color-mix(in srgb,var(--mute) 50%,transparent)}
 #app .m-item.tf .g.c.l::before{bottom:50%}
@@ -382,11 +397,11 @@ dialog input[type=text],dialog input[type=password],dialog select{font-size:15px
 
 /* ---- breadcrumb cards ---- */
 #app .sub:has(.crumbs){display:flex;align-items:center;gap:12px;min-width:0;margin-top:6px}
-#app .crumbs{display:flex;align-items:center;gap:4px;min-width:0;flex:0 1 auto;overflow:hidden;white-space:nowrap}
-#app .crumb{flex:none;max-width:100%;padding:3px 10px;border:1px solid var(--line);background:var(--panel2);color:var(--mute);font:600 13px var(--font);cursor:pointer;transition:border-color .15s,color .15s,background .15s}
-#app .crumb:hover{border-color:var(--accent);color:var(--accent)}
+#app .crumbs{display:flex;align-items:center;gap:3px;min-width:0;flex:0 1 auto;overflow:hidden;white-space:nowrap}
+#app .crumb{flex:none;max-width:100%;padding:3px 2px;border:0;background:none;color:var(--mute);font:600 13px var(--font);cursor:pointer;transition:color .15s}
+#app .crumb:hover{color:var(--accent)}
 #app .crumb.cur{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
-#app .crumb.more{padding:3px 9px;letter-spacing:.05em}
+#app .crumb.more{padding:3px 2px;letter-spacing:.05em}
 #app .crumbs .sep{flex:none;color:var(--mute);font-style:normal;opacity:.7}
 #app .cnt{flex:none;color:var(--mute);font-size:13px}
 
@@ -594,6 +609,8 @@ body.mq-on,body.mq-on *{user-select:none!important;-webkit-user-select:none!impo
 /* drive list: tighter gap under the path row, larger header + size/modified text */
 #app .mach-head:has(.crumbs){height:auto;padding:14px 30px 6px}
 #app .dwrap{margin-top:16px}
+#app #main:has(.dwrap:not(.v-grid)){padding-bottom:0}
+#app .dwrap:not(.v-grid) .dlist{margin-bottom:0}
 #app .dwrap .dh{height:38px;font-size:14.5px;font-weight:700}
 #app .dwrap.v-compact .dh{height:34px}
 #app .dwrap .dr .ds,#app .dwrap .dr .dd{font-size:14.5px}
@@ -602,9 +619,9 @@ body.mq-on,body.mq-on *{user-select:none!important;-webkit-user-select:none!impo
 /* drive list: hide only the Name / Size / Modified header bar */
 #app .dwrap:not(.v-grid) .dh{display:none}
 /* list ends on a whole row: one divider line between rows (top edge), scroll snaps row by row */
-#app .dwrap:not(.v-grid) .dr{position:relative;border-bottom:0;scroll-snap-align:start}
+#app .dwrap:not(.v-grid) .dr{position:relative;border-bottom:0}
 #app .dwrap:not(.v-grid) .dr+.dr::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:var(--line);pointer-events:none}
-#app .dwrap:not(.v-grid) .dlist{scroll-snap-type:y mandatory}
+#app .dwrap:not(.v-grid) .dlist{overflow-y:auto;scrollbar-width:thin}
 /* compact list: file icon 17px tall (odd, like the text) so both icons sit on whole pixels, evenly centred on the name */
 #app .dwrap.v-compact .dn>svg:not(.ifo){width:17px;height:17px;margin-bottom:1px}
 </style></head><body>
@@ -1055,7 +1072,7 @@ addEventListener('keydown',async e=>{
   if(!(sel.size||selMode)||$('lb').classList.contains('on')||document.querySelector('dialog[open]')||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;
   if(e.key==='Escape')clearSel();
   if(e.key==='Delete'&&sel.size&&await deletePhotos(list.filter(p=>sel.has(p.tag))))clearSel()});
-const newAlbum=async()=>{const n=await askName('New album');if(!n)return;await act(async()=>{view=await createAlbum(n);await build()})};
+const newAlbum=()=>sideNew('New album','',async n=>{view=await createAlbum(n);await build()});
 const closePops=x=>document.querySelectorAll('.pop:not(.hidden)').forEach(p=>p!==x&&p.classList.add('hidden'));
 document.addEventListener('click',e=>document.querySelectorAll('.pop:not(.hidden)').forEach(p=>{if(!p.contains(e.target))p.classList.add('hidden')}));
 addEventListener('keydown',e=>{if(e.key==='Escape'){closePops();document.body.classList.remove('nav-open')}});
@@ -1256,6 +1273,7 @@ async function upFile(f,p,tr){
     return{tag:'d'+hex(rand(8)),r:tag,c:n,m:{n:f.name,s:f.size,t:f.type||'',d:f.lastModified||Date.now(),p}}}
   catch(e){tr.end(e.message==='cancelled'?'Cancelled':e.message,0);if(rel)purge(tag);throw e}}
 async function uploadDrive(items){
+  if(items.some(i=>!i.p)){toast('Open a repository first. Files can only be uploaded inside a repository.',5000);items=items.filter(i=>i.p)}
   if(!ROOT||!items.length||!canUp('drive'))return;lockUp('drive');
   const q=[...items],pend=[];let fail=0;q.forEach(it=>it.tr=xf.add(it.f.name,it.f.size,'up'));
   const flush=async()=>{if(!pend.length)return;const es=pend.splice(0);await act(()=>txn(({addDSeg})=>addDSeg(es)))};
@@ -1269,7 +1287,7 @@ async function mkDirs(base,paths){const m={};
   await txn(({root})=>{for(const p of paths){let par=base,acc='';for(const part of p.split('/')){acc+='/'+part;
     if(!m[acc]){let id=Object.keys(root.dfold).find(k=>root.dfold[k].p===par&&root.dfold[k].n===part);if(!id){id='f'+hex(rand(6));root.dfold[id]={n:part,p:par,c:Date.now()}}m[acc]=id}par=m[acc]}}});return m}
 $('dfile').onchange=e=>{uploadDrive([...e.target.files].map(f=>({f,p:dcur})));e.target.value=''};
-$('dfolder').onchange=async e=>{const fs=[...e.target.files],base=dcur;e.target.value='';if(!fs.length||!canUp('drive'))return;
+$('dfolder').onchange=async e=>{const fs=[...e.target.files],base=dcur;e.target.value='';if(!fs.length||!canUp('drive'))return;if(!base){toast('Open a repository first.',4000);return}
   const dir=f=>f.webkitRelativePath.split('/').slice(0,-1).join('/');
   await act(async()=>{const m=await mkDirs(base,[...new Set(fs.map(dir))]);await uploadDrive(fs.map(f=>({f,p:m['/'+dir(f)]})))})};
 
@@ -1289,9 +1307,9 @@ async function dlFile(e){
   catch(x){if(w)await w.abort().catch(()=>{});tr.end(x.message==='cancelled'?'Cancelled':'Download failed',0)}}
 
 /* ---- folder / file actions ---- */
-function askMove(excl){return new Promise(res=>{const d=$('d-move'),t=$('mv-t'),f=ROOT.dfold,rows=[{id:'',n:'My Drive',dp:0}];
+function askMove(excl,foldersOnly){return new Promise(res=>{const d=$('d-move'),t=$('mv-t'),f=ROOT.dfold,rows=foldersOnly?[{id:'',n:'Repositories (top level)',dp:0}]:[];
   const walk=(p,dp)=>Object.entries(f).filter(([id,x])=>x.p===p&&!excl.has(id)).sort((a,b)=>a[1].n.localeCompare(b[1].n)).forEach(([id,x])=>{rows.push({id,n:x.n,dp});walk(id,dp+1)});
-  walk('',1);let pick=dcur;
+  walk('',foldersOnly?1:0);let pick=(!foldersOnly&&dcur==='')?(rows[0]?rows[0].id:''):dcur;
   const draw=()=>{t.innerHTML=rows.map(r=>`<button type="button" class="mt" role="option" data-id="${r.id}" aria-selected="${r.id===pick}" style="padding-left:${10+r.dp*20}px">${r.id===''?icDrive:icFolder()}<span>${esc(r.n)}</span>${r.id===dcur?'<small>current</small>':''}</button>`).join('');
     t.querySelectorAll('.mt').forEach(b=>b.onclick=()=>{pick=b.dataset.id;draw()})};
   draw();let c=false;const done=v=>{if(c)return;c=true;d.close();res(v)};
@@ -1308,15 +1326,28 @@ function inlineEdit(span,val,selEnd){return new Promise(res=>{
   const fit=()=>{const cs=getComputedStyle(inp);cv.font=cs.font;inp.style.width=Math.ceil(cv.measureText(inp.value||' ').width)+4+'px'};
   inp.addEventListener('input',fit);
   span.before(inp);span.style.display='none';fit();inp.focus();selEnd?inp.setSelectionRange(0,selEnd):inp.select()})}
-const newFolderDlg=async()=>{const n=await askName('New folder');if(!n)return;await act(async()=>{await txn(({root})=>{root.dfold['f'+hex(rand(6))]={n,p:dcur,c:Date.now()}});await reload(true)})};
-const newFolder=async()=>{closePops();document.body.classList.remove('nav-open');
+const icRepo='<svg class="ico" viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.714 1.7.75.75 0 1 1-1.072 1.05A2.495 2.495 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.708A2.486 2.486 0 0 1 4.5 9h8ZM5 12.25a.25.25 0 0 1 .25-.25h3.5a.25.25 0 0 1 .25.25v3.25a.25.25 0 0 1-.4.2l-1.45-1.087a.249.249 0 0 0-.3 0L5.4 15.7a.25.25 0 0 1-.4-.2Z"/></svg>';
+/* in-place naming inside the sidebar list (new repository / new album): a temporary row whose name is a text box */
+async function sideNew(label,icon,create){
+  closePops();document.body.classList.add('nav-open');
+  const l=$('list');if(!l||l.querySelector('.sn-row'))return;
+  const row=document.createElement('button');row.type='button';row.className='m-item sn-row'+(icon?' rp':'');
+  row.innerHTML=icon+'<div style="min-width:0;flex:1"><div class="n"></div></div>';
+  const g=l.querySelector('.grp');g?g.after(row):l.prepend(row);
+  const sp=row.querySelector('.n'),n=await inlineEdit(sp,label);
+  if(!n){row.remove();return}
+  sp.textContent=n;row.classList.add('sn-ghost');
+  try{await act(async()=>{await create(n)})}finally{row.remove()}}
+const newFolderDlg=async(label='New folder',p=dcur)=>{const n=await askName(label);if(!n)return;await act(async()=>{await txn(({root})=>{root.dfold['f'+hex(rand(6))]={n,p,c:Date.now()}});await reload(true)})};
+const newRepo=()=>sideNew('New repository',icRepo,async n=>{await txn(({root})=>{root.dfold['f'+hex(rand(6))]={n,p:'',c:Date.now()}});await reload(true)});
+const newFolder=async()=>{closePops();document.body.classList.remove('nav-open');const lbl=dcur===''?'New repository':'New folder';
   const w=space==='drive'&&$('main').querySelector('.dwrap');if(!w)return newFolderDlg();
   const p=dcur;let l=w.querySelector('.dlist'),made=false;
   if(!l){const em=w.querySelector('.empty');if(em)em.remove();l=document.createElement('div');l.className='dlist';w.append(l);made=true}
   const row=document.createElement('div');row.className='dr dr-new';
   row.innerHTML=icFolder().replace('<svg','<svg')+'';row.innerHTML='<span class="dn">'+icFolder()+'<span></span></span><span class="ds"></span><span class="dd"></span><span></span>';
   l.prepend(row);l.scrollTop=0;
-  const sp=row.querySelector('.dn>span'),n=await inlineEdit(sp,'New folder');
+  const sp=row.querySelector('.dn>span'),n=await inlineEdit(sp,lbl);
   if(!n){row.remove();if(made)build(true);return}
   sp.textContent=n;row.classList.add('dr-ghost');   /* grey ghost stays until the real folder arrives */
   try{await act(async()=>{await txn(({root})=>{root.dfold['f'+hex(rand(6))]={n,p,c:Date.now()}});await reload(true)})}
@@ -1326,7 +1357,7 @@ async function renameItem(id){const f=id[0]==='f',e=f?null:DENT.get(id),cur0=f?R
   if(sp){const dot=!f&&cur0.lastIndexOf('.')>0?cur0.lastIndexOf('.'):0;n=await inlineEdit(sp,cur0,dot)}else n=await askName('Rename',cur0);
   if(!n||n===cur0)return;
   await act(async()=>{await txn(({root,addDSeg})=>f?(root.dfold[id]&&(root.dfold[id].n=n)):addDSeg([{...e,m:{...e.m,n}}]));await reload(true)})}
-async function moveItems(ids){const fol=ids.filter(i=>i[0]==='f'),c=await askMove(descOf(fol,ROOT.dfold));if(!c)return false;
+async function moveItems(ids){const fol=ids.filter(i=>i[0]==='f'),c=await askMove(descOf(fol,ROOT.dfold),fol.length===ids.length);if(!c)return false;
   return !!await act(async()=>{const src=dcur,tags=ids.filter(i=>i[0]==='d'&&DENT.has(i));
     await txn(async({root,addDSeg,old})=>{fol.forEach(i=>{if(root.dfold[i])root.dfold[i].p=c.p});
       if(tags.length&&c.p!==src){const m=await folderMap(root,src),mv=tags.filter(t=>m.has(t)).map(t=>m.get(t));
@@ -1362,26 +1393,25 @@ let fitCr=null;
 async function buildDrive(keep){
   const st=det.scrollTop,lst=(document.querySelector('.dwrap .dlist')||{}).scrollTop||0;if(dcur&&!ROOT.dfold[dcur])dcur='';
   const R=ROOT,f0=dcur;
-  if(R.dsegs.some(s=>s.f===f0&&!SEGC.has(key(s))))$('main').innerHTML='<div class="empty">Loading&hellip;</div>';
-  let fm;try{fm=await folderMap(R,f0)}
+  if(f0!==''&&R.dsegs.some(s=>s.f===f0&&!SEGC.has(key(s))))$('main').innerHTML='<div class="empty">Loading&hellip;</div>';
+  let fm;try{fm=f0===''?new Map():await folderMap(R,f0)}   /* root = repositories only; loose root files are ignored, so nothing is downloaded */
   catch{if(f0===dcur&&space==='drive')$('main').innerHTML='<div class="empty"><b>Could not load this folder</b>Check your connection, then open the folder again.</div>';return}
   if(f0!==dcur||space!=='drive')return;DENT=fm;
   $('sp-p').setAttribute('aria-selected',false);$('sp-d').setAttribute('aria-selected',true);$('st').textContent='';
-  const F=ROOT.dfold,tree=[];
-  const walk=(p,d,anc)=>{const kids=Object.entries(F).filter(([,x])=>x.p===p).sort((a,b)=>a[1].n.localeCompare(b[1].n));kids.forEach(([id,x],k)=>{const last=k===kids.length-1;tree.push({id,n:x.n,d,last,anc});walk(id,d+1,[...anc,!last])})};walk('',0,[]);
-const item=(id,n,s,d)=>`<button class="m-item" data-id="${id}" aria-current="${id===dcur}" style="padding-left:${10+d*16}px"><div style="min-width:0"><div class="n">${esc(n)}</div>${s?`<div class="s">${s}</div>`:''}</div></button>`;
-  const fitem=t=>{let g='';for(let j=0;j<t.d;j++)g+=`<i class="g${t.anc[j]?' v':''}"></i>`;g+=`<i class="g c${t.last?' l':''}"></i>`;return `<button class="m-item tf" data-id="${t.id}" aria-current="${t.id===dcur}">${g}<div class="tn"><div class="n">${esc(t.n)}</div></div></button>`};
-  $('list').innerHTML=
-    '<div class="grp"><span>Folders</span></div>'+tree.map(fitem).join('');
+  const F=ROOT.dfold,repos=Object.entries(F).filter(([,x])=>x.p==='').sort((a,b)=>a[1].n.localeCompare(b[1].n)).map(([id,x])=>({id,n:x.n}));
+  const topOf=id=>{while(id&&F[id]&&F[id].p!=='')id=F[id].p;return id},curRepo=topOf(dcur);
+  const ritem=(id,n,cur)=>`<button class="m-item rp" data-id="${id}" aria-current="${cur}">${icRepo}<div class="n">${esc(n)}</div></button>`;
+  $('list').innerHTML='<div class="grp">Repositories</div>'+repos.map(r=>ritem(r.id,r.n,dcur!==''&&r.id===curRepo)).join('');
   $('list').querySelectorAll('.m-item').forEach(b=>b.onclick=()=>{document.body.classList.remove('nav-open');setFolder(b.dataset.id)});
-  const fo=Object.entries(F).filter(([,x])=>x.p===dcur).map(([id,x])=>({dir:1,id,n:x.n,d:x.c,s:0})),
+  const fo=dcur===''?[]:Object.entries(F).filter(([,x])=>x.p===dcur).map(([id,x])=>({dir:1,id,n:x.n,d:x.c,s:0})),
     fi=[...DENT.values()].map(e=>({dir:0,id:e.tag,e,n:e.m.n,d:e.m.d,s:e.m.s})),
     cmp=(a,b)=>(dsort.k==='n'?a.n.localeCompare(b.n,undefined,{numeric:true}):a[dsort.k]-b[dsort.k])*dsort.d,rows=[...fo.sort(cmp),...fi.sort(cmp)];
   DROWS=rows.map(r=>r.id);const path=fpath(dcur),cur=path[path.length-1];
-  const CR=[{id:'',n:'My Drive'},...path],crumbsHtml=k=>(k>0?`<button class="crumb more" data-c="${CR[k-1].id}" type="button" title="${esc(CR.slice(0,k).map(c=>c.n).join(' / '))}">&hellip;</button><i class="sep">&rsaquo;</i>`:'')+CR.slice(k).map((c,i,a)=>`<button class="crumb${i===a.length-1?' cur':''}" data-c="${c.id}" type="button"${i===a.length-1?' aria-current="page"':''}>${esc(c.n)}</button>`).join('<i class="sep">&rsaquo;</i>');
-  $('head').innerHTML=`<div class="mach-head"><button class="btn" id="navbtn" type="button" aria-label="Open menu"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><div style="min-width:0"><h2>${esc(cur?cur.n:'My Drive')}</h2><div class="sub"><div class="crumbs" id="crumbs">${crumbsHtml(0)}</div><span class="cnt">${rows.length} item${rows.length==1?'':'s'}</span></div></div><span class="sp"></span><div class="kebab-wrap"><button class="btn primary" id="nbtn" type="button" aria-haspopup="menu">New</button><div class="pop hidden" id="nmn"><button id="dnew" type="button">New folder</button><button id="dfo" type="button">Upload folder</button><button id="dup" type="button">Upload files</button></div></div>`+
-    (cur?'<div class="kebab-wrap hidden"><button class="btn" id="kb" type="button" aria-label="Folder options"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v.01M12 12v.01M12 19v.01" stroke-width="3"/></svg></button><div class="pop hidden" id="km"><button id="k-ren" type="button">Rename folder</button><button class="d" id="k-del" type="button">Delete folder</button></div></div>':'')+'</div>';
-  $('navbtn').onclick=()=>document.body.classList.add('nav-open');$('nbtn').onclick=e=>{e.stopPropagation();closePops($('nmn'));$('nmn').classList.toggle('hidden')};$('dnew').onclick=newFolder;$('dup').onclick=()=>canUp('drive')&&$('dfile').click();$('dfo').onclick=()=>canUp('drive')&&$('dfolder').click();
+  const CR=[...path],crumbsHtml=k=>(k>0?`<button class="crumb more" data-c="${CR[k-1].id}" type="button" title="${esc(CR.slice(0,k).map(c=>c.n).join(' / '))}">&hellip;</button><i class="sep">/</i>`:'')+CR.slice(k).map((c,i,a)=>`<button class="crumb${i===a.length-1?' cur':''}" data-c="${c.id}" type="button"${i===a.length-1?' aria-current="page"':''}>${esc(c.n)}</button>`).join('<i class="sep">/</i>');
+  $('head').innerHTML=`<div class="mach-head"><button class="btn" id="navbtn" type="button" aria-label="Open menu"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><div style="min-width:0"><h2>${esc(path[0]?path[0].n:'Repositories')}</h2><div class="sub"><div class="crumbs" id="crumbs">${crumbsHtml(0)}</div>${dcur===''?'':`<span class="cnt">${rows.length} item${rows.length==1?'':'s'}</span>`}</div></div><span class="sp"></span><div class="kebab-wrap"><button class="btn primary" id="nbtn" type="button" aria-haspopup="menu">New</button><div class="pop hidden" id="nmn"><button id="drepo" type="button">New repository</button>${dcur===''?'':'<button id="dnew" type="button">New folder</button><button id="dfo" type="button">Upload folder</button><button id="dup" type="button">Upload files</button>'}</div></div>`+
+    (cur?'<div class="kebab-wrap"><button class="btn" id="kb" type="button" aria-label="Folder options"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square"><path d="M12 5v.01M12 12v.01M12 19v.01" stroke-width="3"/></svg></button><div class="pop hidden" id="km"><button id="k-ren" type="button">Rename '+(F[cur.id].p===''?'repository':'folder')+'</button><button class="d" id="k-del" type="button">Delete '+(F[cur.id].p===''?'repository':'folder')+'</button></div></div>':'')+'</div>';
+  $('navbtn').onclick=()=>document.body.classList.add('nav-open');$('nbtn').onclick=e=>{e.stopPropagation();closePops($('nmn'));$('nmn').classList.toggle('hidden')};$('drepo').onclick=newRepo;if($('dnew')){$('dnew').onclick=newFolder;$('dup').onclick=()=>canUp('drive')&&$('dfile').click();$('dfo').onclick=()=>canUp('drive')&&$('dfolder').click()}
+  if(dcur===''){$('head').innerHTML='<div class="mach-head rh"><button class="btn" id="navbtn" type="button" aria-label="Open menu"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>';$('navbtn').onclick=()=>document.body.classList.add('nav-open')}
   fitCr=()=>{const box=$('crumbs');if(!box)return;let k=0;box.innerHTML=crumbsHtml(0);while(k<CR.length-1&&box.scrollWidth>box.clientWidth+1){k++;box.innerHTML=crumbsHtml(k)}box.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>setFolder(b.dataset.c))};
   fitCr();if(!window.__crz){window.__crz=1;addEventListener('resize',()=>fitCr&&fitCr())}
   if(cur){$('kb').onclick=e=>{e.stopPropagation();closePops($('km'));$('km').classList.toggle('hidden')};$('k-ren').onclick=()=>renameItem(dcur);
@@ -1389,7 +1419,8 @@ const item=(id,n,s,d)=>`<button class="m-item" data-id="${id}" aria-current="${i
   const arrow=k=>k==='n'?'':dsort.k===k?(dsort.d>0?' ▲':' ▼'):'';
   $('main').innerHTML=`<div class="dwrap v-${dview}"><div class="dh"><button data-k="n" type="button">Name${arrow('n')}</button><button data-k="s" type="button">Size${arrow('s')}</button><button data-k="d" type="button">Modified${arrow('d')}</button><span></span></div>`+
     (rows.length?'<div class="dlist">'+rows.map(r=>`<div class="dr${dsel.has(r.id)?' sel':''}" data-id="${r.id}"><span class="dn">${r.dir?icFolder(r.id):icFile(r.e)}<span>${esc(r.n)}</span></span><span class="ds">${r.dir?fmt(0):fmt(r.s)}</span><span class="dd">${r.d?new Date(r.d).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}):''}</span><span>${r.dir?'':'<button class="dl1" type="button" title="Download" aria-label="Download">'+icDl+'</button>'}</span></div>`).join('')+'</div>':
-    '<div class="empty"><b>This folder is empty</b>Upload files, upload a folder, or drop files anywhere on this page. Large files are split into encrypted 24 MB chunks.</div>')+'</div>';
+    (dcur===''?'<div class="empty"><b>Open an existing repository or <button type="button" class="lk">create a new one</button></b>Pick a repository from the left to get started. Each repository holds its own files and folders.</div>':'<div class="empty"><b>This '+(cur&&ROOT.dfold[cur.id].p===''?'repository':'folder')+' is empty</b>Upload files, upload a folder, or drop files anywhere on this page. Large files are split into encrypted 24 MB chunks.</div>'))+'</div>';
+  const lk=$('main').querySelector('.empty .lk');if(lk)lk.onclick=newRepo;
   $('main').querySelectorAll('.dh button').forEach(b=>b.onclick=()=>{const k=b.dataset.k;dsort=dsort.k===k?{k,d:-dsort.d}:{k,d:1};build(true)});
   $('main').querySelectorAll('.dr').forEach(r=>{const id=r.dataset.id;let lp=0,lpd=false;
     const b=r.querySelector('.dl1');if(b)b.onclick=e=>{e.stopPropagation();dlFile(DENT.get(id))};
@@ -1402,10 +1433,11 @@ const item=(id,n,s,d)=>`<button class="m-item" data-id="${id}" aria-current="${i
       closeCtx();if(e.ctrlKey||e.metaKey||dsel.size){toggleD(id);return}
       if(id[0]==='f')setFolder(id);else openFile(DENT.get(id))}});
   renderDBar();fitDList();if(keep){det.scrollTop=st;const l=document.querySelector('.dwrap .dlist');if(l)l.scrollTop=lst}}
-/* size the list to a whole number of rows so its bottom edge never cuts a row in half */
+/* list bottom sits a constant 18px above the end of the grey panel; the last row is simply cut off there */
 function fitDList(){const w=document.querySelector('.dwrap:not(.v-grid)'),l=w&&w.querySelector('.dlist');if(!l)return;l.style.maxHeight='';
   const r=l.children[1]||l.children[0];if(!r)return;const rh=r.getBoundingClientRect().height;if(!rh)return;
-  const top=l.getBoundingClientRect().top+det.scrollTop,n=Math.max(3,Math.floor((innerHeight-top-18)/rh));l.style.maxHeight=n*rh+'px'}
+  /* constant 18px bottom margin; the last visible row may be clipped */
+  const dr=det.getBoundingClientRect(),room=Math.min(dr.bottom,innerHeight)-l.getBoundingClientRect().top-18;l.style.maxHeight=Math.max(rh*3,room)+'px'}
 addEventListener('resize',()=>fitDList());
 function toggleD(id){dsel.has(id)?dsel.delete(id):dsel.add(id);danchor=dsel.size?id:null;syncD();renderDBar()}
 function rangeD(id){const a=DROWS.indexOf(danchor),b=DROWS.indexOf(id);if(a<0||b<0)return toggleD(id);for(let k=Math.min(a,b);k<=Math.max(a,b);k++)dsel.add(DROWS[k]);syncD();renderDBar()}
